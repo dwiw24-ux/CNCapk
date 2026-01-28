@@ -1,0 +1,38 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style
+        name="Theme.DwiCreativeCNC"
+        parent="Theme.Material3.Dark.NoActionBar">
+
+        <!-- Background -->
+        <item name="android:windowBackground">@color/cnc_background</item>
+        <item name="colorSurface">@color/cnc_surface</item>
+        <item name="colorSurfaceVariant">@color/cnc_surface_alt</item>
+
+        <!-- Primary -->
+        <item name="colorPrimary">@color/cnc_primary</item>
+        <item name="colorOnPrimary">@color/cnc_on_primary</item>
+
+        <!-- Secondary -->
+        <item name="colorSecondary">@color/cnc_secondary</item>
+        <item name="colorOnSecondary">@color/cnc_on_secondary</item>
+
+        <!-- Text -->
+        <item name="android:textColorPrimary">@color/cnc_text_primary</item>
+        <item name="android:textColorSecondary">@color/cnc_text_secondary</item>
+
+        <!-- Outline -->
+        <item name="colorOutline">@color/cnc_outline</item>
+
+        <!-- Status bar -->
+        <item name="android:statusBarColor">@color/cnc_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+
+    </style>
+
+    <style name="ThemeOverlay.DwiCreativeCNC.Dialog"
+        parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorSurface">#121212</item>
+        <item name="colorPrimary">#FF9800</item>
+        <item name="colorOnSurface">#E0E0E0</item>
+    </style>
+</resources>

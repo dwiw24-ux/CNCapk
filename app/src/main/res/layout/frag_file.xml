@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/txtFileInfo"
+        android:text="No file"
+        android:textColor="#00E676"
+        android:textStyle="bold"
+        android:textSize="12sp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <ProgressBar
+        android:id="@+id/progressRun"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:max="100"
+        android:progress="0"
+        android:progressTint="#00E676"
+        android:background="#333333"
+        android:layout_marginTop="8dp"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:id="@+id/txtEta"
+            android:text="Run Time: 00:00"
+            android:textColor="#00E676"
+            android:textSize="12sp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+        <TextView
+            android:id="@+id/txtProgress"
+            android:text="0 %"
+            android:textColor="#00E676"
+            android:textSize="12sp"
+            android:gravity="end"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvGcode"
+        android:layout_width="match_parent"
+        android:padding="8dp"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@color/offsetNormal"/>
+
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_marginVertical="4dp">
+
+        <EditText
+            android:id="@+id/edtStartLine"
+            android:hint="Start line"
+            android:inputType="number"
+            android:textColor="#00E676"
+            android:textSize="14sp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="36dp"/>
+
+        <Button
+            android:id="@+id/btnRunFromHere"
+            android:text="RUN FROM HERE"
+            android:textSize="10sp"
+            android:background="@drawable/bg_btn_square_selector"
+            app:backgroundTint="@null"
+            android:textColor="@color/text_primary"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp">
+
+        <Button
+            android:id="@+id/btnOpen"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_marginHorizontal="2dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_btn_square_selector"
+            android:text="FILE"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            app:backgroundTint="@null"
+            android:textAlignment="center"/>
+
+        <Button
+            android:id="@+id/btnRun"
+            android:text="RUN"
+            android:textSize="12sp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_btn_square_selector"
+            app:backgroundTint="@null"
+            android:textColor="@color/text_primary"
+            android:layout_marginHorizontal="2dp"/>
+
+        <Button
+            android:id="@+id/btnPause"
+            android:text="HOLD"
+            android:textSize="12sp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_btn_square_selector"
+            app:backgroundTint="@null"
+            android:textColor="@color/text_primary"
+            android:layout_marginHorizontal="2dp"/>
+
+        <Button
+            android:id="@+id/btnStop"
+            android:text="STOP"
+            android:textSize="12sp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_btn_square_selector"
+            app:backgroundTint="@null"
+            android:textColor="@color/text_primary"
+            android:layout_marginHorizontal="2dp"/>
+    </LinearLayout>
+
+    <!-- FEED OVERRIDE -->
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:id="@+id/txtFeedOv"
+            android:text="100%"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:gravity="center"
+            android:padding="6dp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"/>
+
+        <TextView
+            android:text="Feed/Spindle"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:gravity="center"
+            android:padding="6dp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"/>
+
+        <TextView
+            android:id="@+id/txtSpinOv"
+            android:text="100%"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:gravity="center"
+            android:padding="6dp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <Button
+            android:id="@+id/btnFeedMinus"
+            android:text="F-10%"
+            android:textSize="12sp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_btn_square_selector"
+            app:backgroundTint="@null"
+            android:textColor="@color/text_primary"
+            android:layout_marginHorizontal="2dp"
+            android:textAlignment="center"/>
+
+        <Button
+            android:id="@+id/btnFeedReset"
+            android:text="F100%"
+            android:textSize="12sp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_btn_square_selector"
+            app:backgroundTint="@null"
+            android:textColor="@color/text_primary"
+            android:layout_marginHorizontal="2dp"/>
+
+        <Button
+            android:id="@+id/btnFeedPlus"
+            android:text="F+10%"
+            android:textSize="12sp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_btn_square_selector"
+            app:backgroundTint="@null"
+            android:textColor="@color/text_primary"
+            android:layout_marginHorizontal="2dp"/>
+    </LinearLayout>
+
+    <!-- SPINDLE OVERRIDE -->
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <Button
+            android:id="@+id/btnSpinMinus"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:text="S-10%"
+            android:textSize="12sp"
+            android:background="@drawable/bg_btn_square_selector"
+            app:backgroundTint="@null"
+            android:textColor="@color/text_primary"
+            android:layout_marginHorizontal="2dp"/>
+
+        <Button
+            android:id="@+id/btnSpinReset"
+            android:text="S100%"
+            android:textSize="12sp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_btn_square_selector"
+            app:backgroundTint="@null"
+            android:textColor="@color/text_primary"
+            android:layout_marginHorizontal="2dp"/>
+
+        <Button
+            android:id="@+id/btnSpinPlus"
+            android:text="S+10%"
+            android:textSize="12sp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_btn_square_selector"
+            app:backgroundTint="@null"
+            android:textColor="@color/text_primary"
+            android:layout_marginHorizontal="2dp"/>
+    </LinearLayout>
+
+</LinearLayout>
