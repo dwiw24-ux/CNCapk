@@ -95,13 +95,13 @@ class FileFragment : Fragment(R.layout.frag_file) {
             val bt = (activity as? MainActivity)?.btService ?: return@setOnClickListener
             if (runMode == RunMode.RUNNING) {
                 bt.send("!")
-                paused = true
+                //paused = true
                 runMode = RunMode.PAUSED
                 pauseStart = System.currentTimeMillis()
             } else if (runMode == RunMode.PAUSED) {
                 bt.send("~")
                 pausedDuration += System.currentTimeMillis() - pauseStart
-                paused = false
+                //paused = false
                 runMode = RunMode.RUNNING
             }
         }
