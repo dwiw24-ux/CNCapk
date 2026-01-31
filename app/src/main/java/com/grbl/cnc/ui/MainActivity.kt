@@ -19,13 +19,16 @@ import com.grbl.cnc.bluetooth.BluetoothService
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
+import android.widget.Button
+import android.widget.EditText
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.annotation.RequiresPermission
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.grbl.cnc.grbl.GrblState
 import com.grbl.cnc.grbl.GrblStatus
-import com.grbl.cnc.grbl.GrblStatusParser
 import com.grbl.cnc.ui.pager.ConsoleFragment
 import java.util.Locale
 
@@ -37,6 +40,7 @@ class MainActivity : AppCompatActivity() {
 
     var pendingGrblConnect = false
     private lateinit var txtStatus: TextView
+    private lateinit var txtWcs: TextView
     private lateinit var txtStatusGrbl: TextView
     private lateinit var txtmposX: TextView
     private lateinit var txtmposY: TextView
@@ -74,6 +78,7 @@ class MainActivity : AppCompatActivity() {
         })
 
         txtStatusGrbl = findViewById(R.id.txtStatusGrbl)
+        txtWcs = findViewById(R.id.txtWcs)
 
         txtmposX = findViewById(R.id.txtmposX)
         txtmposY = findViewById(R.id.txtmposY)
@@ -85,6 +90,10 @@ class MainActivity : AppCompatActivity() {
 
         txtFeed = findViewById(R.id.txtFeed)
         txtSpindle = findViewById(R.id.txtSpindle)
+
+        txtwposX.setOnClickListener { showWPosDialog('X') }
+        txtwposY.setOnClickListener { showWPosDialog('Y') }
+        txtwposZ.setOnClickListener { showWPosDialog('Z') }
 
         val viewPager = findViewById<ViewPager2>(R.id.viewPager)
         val tabLayout = findViewById<TabLayout>(R.id.tabLayout)
@@ -120,11 +129,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        /** 🔥 STATUS SAJA */
         btService.onStatus = { status ->
             runOnUiThread {
                 updateStatusUI(status)
             }
+        }
+
+        btService.onLine = { line ->
+            runOnUiThread { handleGrblLine(line) }
         }
 
         /** 🔥 RAW → CONSOLE */
@@ -176,7 +188,8 @@ class MainActivity : AppCompatActivity() {
             )
         }
     }
-    @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
+
+    @RequiresPermission(anyOf = ["android.permission.BLUETOOTH_CONNECT","android.permission.BLUETOOTH_SCAN"])
     private fun showBluetoothDialog() {
         val devices = btService.getPairedDevices()
         if (devices.isEmpty()) return
@@ -194,6 +207,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    @RequiresPermission("android.permission.BLUETOOTH_CONNECT")
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -227,10 +241,10 @@ class MainActivity : AppCompatActivity() {
 
     private val statusRunnable = object : Runnable {
         override fun run() {
-            if (btService.isConnected && !isJogging && !btService.isBusy) {
+            if (btService.isConnected ) {
                 btService.send("?")
             }
-            handler.postDelayed(this, 200)
+            handler.postDelayed(this, 150)
         }
     }
 
@@ -278,5 +292,67 @@ class MainActivity : AppCompatActivity() {
             )
             .setPositiveButton("OK", null)
             .show()
+    }
+
+    fun handleGrblLine(line: String) {
+        if (!line.startsWith("[G")) return
+
+        val wcs = when {
+            line.contains("G54") -> "G54"
+            line.contains("G55") -> "G55"
+            line.contains("G56") -> "G56"
+            line.contains("G57") -> "G57"
+            line.contains("G58") -> "G58"
+            line.contains("G59") -> "G59"
+            else -> "-"
+        }
+
+        txtWcs.text = wcs
+    }
+
+    fun showWPosDialog(axis: Char) {
+        val view = layoutInflater.inflate(R.layout.dialog_set_wpos, null)
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .setCancelable(false)
+            .create()
+
+        val txtAxis = view.findViewById<TextView>(R.id.txtAxis) ?: return
+        val edtValue = view.findViewById<EditText>(R.id.edtValue) ?: return
+        val btnSet = view.findViewById<Button>(R.id.btnSet) ?: return
+        val btnZero = view.findViewById<Button>(R.id.btnZero) ?: return
+        val btnCancel = view.findViewById<Button>(R.id.btnCancel) ?: return
+
+        txtAxis.text = "Set WPos $axis"
+
+        btnSet.setOnClickListener {
+            if (!btService.isConnected) {
+                Toast.makeText(this, "Bluetooth not connected", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val value = edtValue.text.toString().trim()
+            if (value.isEmpty()) return@setOnClickListener
+
+            btService.send("G10 L20 P1 $axis $value\n")
+            dialog.dismiss()
+        }
+
+        btnZero.setOnClickListener {
+            if (!btService.isConnected) {
+                Toast.makeText(this, "Bluetooth not connected", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            btService.send("G10 L20 P1 ${axis} 0\n")
+            dialog.dismiss()
+        }
+
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 }

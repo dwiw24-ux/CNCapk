@@ -13,12 +13,14 @@ import java.util.*
 
 class BluetoothService(private val context: Context) {
 
+    private var rxBuffer = ""
 
     companion object {
         val GRBL_UUID: UUID =
             UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
     }
 
+    @Suppress("DEPRECATION")
     private val bluetoothAdapter: BluetoothAdapter? =
         BluetoothAdapter.getDefaultAdapter()
 
@@ -37,20 +39,18 @@ class BluetoothService(private val context: Context) {
 
     /** STATUS <Idle|MPos|FS> */
     var onStatus: ((GrblStatus) -> Unit)? = null
-
-    //var onMessage: ((String) -> Unit)? = null
-    //var onRawMessage: ((String) -> Unit)? = null
+    var onLine: ((String) -> Unit)? = null
+    var onError: ((String) -> Unit)? = null
     var onOkReceived: (() -> Unit)? = null
 
     private val rawListeners = mutableListOf<(String) -> Unit>()
-    //private val msgListeners = mutableListOf<(String) -> Unit>()
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun getPairedDevices(): List<BluetoothDevice> {
         return bluetoothAdapter?.bondedDevices?.toList() ?: emptyList()
     }
 
-    @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
+    @RequiresPermission(anyOf = [Manifest.permission.BLUETOOTH_SCAN,"android.permission.BLUETOOTH_CONNECT"])
     fun connect(device: BluetoothDevice) {
         connectedDeviceName = device.name ?: "Unknown"
         Thread {
@@ -80,44 +80,77 @@ class BluetoothService(private val context: Context) {
                 val len = input?.read(buffer) ?: -1
                 if (len <= 0) continue
 
-                val data = String(buffer, 0, len)
+                //val data = String(buffer, 0, len)
 
                 // RAW → console
-                rawListeners.forEach { it.invoke(data) }
+                //rawListeners.forEach { it.invoke(data) }
 
-                data.lines().forEach { line ->
-                    val text = line.trim()
-                    if (text.isEmpty()) return@forEach
+                //data.lines().forEach { line ->
+                   // val text = line.trim()
+                   // if (text.isEmpty()) return@forEach
 
-                    // OK
-                    if (text.equals("ok", true)) {
-                        isBusy = false
-                        onOkReceived?.invoke()
-                        return@forEach
-                    }
+                    //if (text.equals("ok", true)) {
+                        //isBusy = false
+                      //  onOkReceived?.invoke()
+                      //  return@forEach
+                   // }
 
-                    // STATUS
-                    GrblStatusParser.parse(text)?.let {
-                        onStatus?.invoke(it)
+                    //GrblStatusParser.parse(text)?.let {
+                      //  onStatus?.invoke(it)
+                    //}
+
+                val chunk = String(buffer, 0, len, Charsets.US_ASCII)
+
+                rawListeners.forEach { it.invoke(chunk) }
+
+                rxBuffer += (chunk)
+
+                while (true) {
+                    val nl = rxBuffer.indexOf('\n')
+                    if (nl < 0) break
+
+                    val line = rxBuffer.substring(0, nl).trim()
+                    rxBuffer = rxBuffer.substring(nl + 1)
+
+                    if (line.isEmpty()) continue
+
+                    when {
+                        // 1️⃣ STATUS REALTIME
+                        line.startsWith("<") -> {
+                            GrblStatusParser.parse(line)?.let {
+                                onStatus?.invoke(it)
+                            }
+                        }
+
+                        // 2️⃣ OK
+                        line == "ok" -> {
+                            onOkReceived?.invoke()
+                        }
+
+                        // 3️⃣ ERROR
+                        line.startsWith("error:") -> {
+                            onError?.invoke(line)
+                        }
+
+                        // 4️⃣ LINE RESPONSE ($G, $#, [G54...])
+                        else -> {
+                            onLine?.invoke(line)
+                        }
                     }
                 }
-
             } catch (e: Exception) {
                 disconnect()
             }
         }
     }
 
-
-    @Volatile
-    var isBusy = false
     fun send(cmd: String) {
         try {
-            val data = if (cmd.endsWith("\n")) cmd else "$cmd\n"
-            isBusy = true
-            output?.write(data.toByteArray(Charsets.US_ASCII))
-            output?.flush()   // 🔥 PENTING
-            Log.d("BT_SEND", data.replace("\n", "\\n"))
+            output?.write(cmd.toByteArray(Charsets.US_ASCII))
+            //val data = if (cmd.endsWith("\n")) cmd else "$cmd\n"
+            //output?.write(data.toByteArray(Charsets.US_ASCII))
+            output?.flush()
+            //Log.d("BT_SEND", data.replace("\n", "\\n"))
         } catch (e: Exception) {
             disconnect()
         }
@@ -148,7 +181,31 @@ class BluetoothService(private val context: Context) {
         rawListeners.remove(cb)
     }
 
-    //fun addMessageListener(cb: (String) -> Unit) {
-    //    msgListeners.add(cb)
-    //}
+    private fun processRx(chunk: String) {
+        rxBuffer += chunk
+
+        while (true) {
+            val nl = rxBuffer.indexOf('\n')
+            if (nl < 0) break
+
+            val line = rxBuffer.substring(0, nl).trim()
+            rxBuffer = rxBuffer.substring(nl + 1)
+
+            when {
+                line == "ok" -> {
+                    onOkReceived?.invoke()
+                }
+
+                line.startsWith("error:") -> {
+                    onOkReceived?.invoke()
+                }
+
+                line.startsWith("<") -> {
+                    GrblStatusParser.parse(line)?.let {
+                        onStatus?.invoke(it)
+                    }
+                }
+            }
+        }
+    }
 }

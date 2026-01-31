@@ -9,6 +9,7 @@ import androidx.fragment.app.Fragment
 import com.grbl.cnc.R
 import com.grbl.cnc.ui.MainActivity
 import android.view.MotionEvent
+import android.widget.Button
 import android.widget.TextView
 
 class JogFragment : Fragment(R.layout.frag_jog) {
@@ -82,6 +83,61 @@ class JogFragment : Fragment(R.layout.frag_jog) {
         view.findViewById<ImageButton>(R.id.btnStop)
             .setOnClickListener {
                 (activity as? MainActivity)?.btService?.sendRealtime(0x85.toByte())
+            }
+
+        view.findViewById<Button>(R.id.jogGo0)
+            .setOnClickListener {
+                (activity as? MainActivity)?.btService?.send("G90\n")
+                (activity as? MainActivity)?.btService?.send("G53 G0 Z0\n")
+                (activity as? MainActivity)?.btService?.send("G90 G0 X0 Y0\n")
+                (activity as? MainActivity)?.btService?.send("G90 G0 Z0\n")
+                //(activity as? MainActivity)?.btService?.send(
+                  //  """G90
+                  //  G53 GO Z0
+                   // G90 G0 X0 Y0
+                  //  G90 G0 Z0
+                //""".trimIndent())
+            }
+        view.findViewById<Button>(R.id.jogAll0)
+            .setOnClickListener {
+                (activity as? MainActivity)?.btService?.send("G10 L20 P0 X0Y0Z0\n")
+            }
+        view.findViewById<Button>(R.id.jogX0)
+            .setOnClickListener {
+                (activity as? MainActivity)?.btService?.send("G10 L20 P0 X0\n")
+            }
+        view.findViewById<Button>(R.id.jogY0)
+            .setOnClickListener {
+                (activity as? MainActivity)?.btService?.send("G10 L20 P0 Y0\n")
+            }
+        view.findViewById<Button>(R.id.jogZ0)
+            .setOnClickListener {
+                (activity as? MainActivity)?.btService?.send("G10 L20 P0 Z0\n")
+            }
+        view.findViewById<Button>(R.id.g54)
+            .setOnClickListener {
+                (activity as? MainActivity)?.btService?.send("G54\n")
+                (activity as? MainActivity)?.btService?.send("\$G\n")
+            }
+        view.findViewById<Button>(R.id.g55)
+            .setOnClickListener {
+                (activity as? MainActivity)?.btService?.send("G55\n")
+                (activity as? MainActivity)?.btService?.send("\$G\n")
+            }
+        view.findViewById<Button>(R.id.g56)
+            .setOnClickListener {
+                (activity as? MainActivity)?.btService?.send("G56\n")
+                (activity as? MainActivity)?.btService?.send("\$G\n")
+            }
+        view.findViewById<Button>(R.id.g57)
+            .setOnClickListener {
+                (activity as? MainActivity)?.btService?.send("G57\n")
+                (activity as? MainActivity)?.btService?.send("\$G\n")
+            }
+        view.findViewById<Button>(R.id.g58)
+            .setOnClickListener {
+                (activity as? MainActivity)?.btService?.send("G58\n")
+                (activity as? MainActivity)?.btService?.send("\$G\n")
             }
     }
 

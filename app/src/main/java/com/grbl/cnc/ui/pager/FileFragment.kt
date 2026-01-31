@@ -10,6 +10,7 @@ import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -43,8 +44,16 @@ class FileFragment : Fragment(R.layout.frag_file) {
     private var pauseStart = 0L
     private var pausedDuration = 0L
     private var timerRunning = false
+    private var waitingOk = false
+
+    enum class RunMode { IDLE, RUNNING, PAUSED }
+    private var runMode = RunMode.IDLE
+
+    private val sendQueue = ArrayDeque<String>()
+
 
     private val timerHandler = Handler(Looper.getMainLooper())
+
     private val timerRunnable = object : Runnable {
         override fun run() {
             if (!timerRunning) return
@@ -79,27 +88,44 @@ class FileFragment : Fragment(R.layout.frag_file) {
             picker.launch(arrayOf("*/*"))
         }
         view.findViewById<Button>(R.id.btnRun).setOnClickListener {
-            startRun()
+            if (runMode != RunMode.IDLE) return@setOnClickListener
+            startRun() // run normal dari baris 0
         }
         view.findViewById<Button>(R.id.btnPause).setOnClickListener {
             val bt = (activity as? MainActivity)?.btService ?: return@setOnClickListener
-            paused = !paused
-            if (paused) {
+            if (runMode == RunMode.RUNNING) {
                 bt.send("!")
+                paused = true
+                runMode = RunMode.PAUSED
                 pauseStart = System.currentTimeMillis()
-                txtEta.text = "Run Time: ⏸ Paused"
-            } else {
+            } else if (runMode == RunMode.PAUSED) {
                 bt.send("~")
                 pausedDuration += System.currentTimeMillis() - pauseStart
+                paused = false
+                runMode = RunMode.RUNNING
             }
         }
 
         view.findViewById<Button>(R.id.btnStop).setOnClickListener {
-            stopRun()
-            progressBar.progress = 0
+            (activity as? MainActivity)?.btService?.sendRealtime(0x18.toByte())
+            sendQueue.clear()
+            runMode = RunMode.IDLE
+            paused = true
+            timerRunning = false
+            current = lines.size
+            timerHandler.removeCallbacks(timerRunnable)
+            progressBar.progress = 100
+            txtProgress.text = "100 %"
         }
         view.findViewById<Button>(R.id.btnRunFromHere).setOnClickListener {
-            runFromHere()
+            if (runMode != RunMode.IDLE) return@setOnClickListener
+
+            val idx = edtStart.text.toString()
+                .toIntOrNull()
+                ?.minus(1)
+                ?: return@setOnClickListener
+
+            showRunFromHereWarning(idx)
         }
 
         // ===== FEED OVERRIDE =====
@@ -113,7 +139,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
         }
 
         view.findViewById<Button>(R.id.btnFeedPlus).setOnClickListener {
-            if (feedOv < 200) {
+            if (feedOv < 400) {
                 feedOv += 10
                 (activity as? MainActivity)?.btService?.sendRealtime(0x91.toByte()) // Feed +
                 txtFeedOv.text = "$feedOv%"
@@ -149,11 +175,28 @@ class FileFragment : Fragment(R.layout.frag_file) {
             txtSpinOv.text = "100%"
         }
 
-        // ===== OK CALLBACK =====
         (activity as? MainActivity)?.btService?.onOkReceived = {
             activity?.runOnUiThread {
-                if (!isRunning || paused) return@runOnUiThread
-                sendNext()
+
+                if (!waitingOk) return@runOnUiThread
+                //if (runMode != RunMode.RUNNING || !waitingOk) return@runOnUiThread
+
+                waitingOk = false
+                current++
+
+                if (runMode == RunMode.RUNNING) {
+                    sendNext()
+                }
+
+                val percent = (((current + 1).toFloat() / lines.size) * 100).toInt()
+                progressBar.progress = percent
+                txtProgress.text = "$percent %"
+
+                adapter.activeLine = current
+                adapter.notifyItemChanged(current)
+                rv.scrollToPosition(current)
+
+                edtStart.setText((current + 1).toString())
             }
         }
     }
@@ -173,13 +216,19 @@ class FileFragment : Fragment(R.layout.frag_file) {
                     !it.startsWith(";") }
 
         adapter = GcodeAdapter(lines) { index ->
-            runFromHere(index)
+            if (runMode == RunMode.IDLE) {
+                showRunFromHereWarning(index)
+            }
         }
         rv.adapter = adapter
 
         current = 0
         paused = true
         isRunning = false
+        waitingOk = false
+
+        timerRunning = false
+        timerHandler.removeCallbacks(timerRunnable)
 
         progressBar.progress = 0
         txtProgress.text = "0 %"
@@ -192,87 +241,66 @@ class FileFragment : Fragment(R.layout.frag_file) {
     private fun startRun() {
         if (lines.isEmpty()) return
 
-        isRunning = true
-        paused = false
-        current = 0
+        sendQueue.clear()
+        sendQueue.addAll(lines)
 
-        // ===== TIMER START =====
+        current = 0
+        paused = false
+        waitingOk = false
+        runMode = RunMode.RUNNING
+
         startTime = System.currentTimeMillis()
-        pausedDuration = 0L
+        pausedDuration = 0
         timerRunning = true
         timerHandler.post(timerRunnable)
 
+        edtStart.setText("1")
+
         sendNext()
-    }
-
-    private fun stopRun() {
-        paused = true
-        isRunning = false
-        current = lines.size
-
-        timerRunning = false
-        timerHandler.removeCallbacks(timerRunnable)
-
-        (activity as? MainActivity)?.btService?.sendRealtime(0x18.toByte())
-
-        txtEta.text = "Run Time:■ Stopped"
     }
 
     private fun sendNext() {
-        if (paused || current >= lines.size) {
-            if (current >= lines.size) {
-                progressBar.progress = 100
-                txtProgress.text = "100 %"
+        if (runMode != RunMode.RUNNING) return
+        if (sendQueue.isEmpty()) return
 
-                timerRunning = false
-                timerHandler.removeCallbacks(timerRunnable)
-                txtEta.text = "Run Time: ✔ Done"
-            }
-            return
-        }
-
-        val line = lines[current]
-
-        edtStart.setText((current + 1).toString())
-
-        adapter.activeLine = current
-        adapter.notifyItemChanged(current)
-        rv.scrollToPosition(current)
-
-        val percent = ((current.toFloat() / lines.size) * 100).toInt()
-        progressBar.progress = percent
-        txtProgress.text = "$percent %"
-
-        // kirim ke GRBL
-        (activity as? MainActivity)?.btService?.send(line)
-        current++
+        waitingOk = true
+        val cmd = sendQueue.removeFirst()
+        (activity as? MainActivity)?.btService?.send(cmd + "\n")
     }
 
     private fun runFromHere(index: Int) {
-        if (lines.isEmpty()) return
         if (index !in lines.indices) return
-
-
-        // ⚠️ SAFETY RESET
         val bt = (activity as? MainActivity)?.btService ?: return
-        bt.sendRealtime(0x18.toByte()) // soft reset
-        Thread.sleep(300)
 
-        current = index
-        paused = false
-        isRunning = true
+        val st = scanStatePro(lines, index)
+        if (st.z == null) {
+            txtEta.text = "Run From Here dibatalkan: Z unknown"
+            return
+        }
 
-        // ===== RESET TIMER =====
-        startTime = System.currentTimeMillis()
-        pausedDuration = 0L
-        timerRunning = true
-        timerHandler.post(timerRunnable)
+        paused = true
+        runMode = RunMode.IDLE
+        waitingOk = false
+        bt.sendRealtime(0x18.toByte()) // reset GRBL
 
-        adapter.activeLine = current
-        adapter.notifyDataSetChanged()
-        rv.scrollToPosition(current)
+        Handler(Looper.getMainLooper()).postDelayed({
+            sendQueue.clear()
+            sendQueue.addAll(buildRunFromHereHeader(st))
+            sendQueue.addAll(lines.subList(index, lines.size))
 
-        sendNext()
+            current = index
+            paused = false
+            runMode = RunMode.RUNNING
+
+            startTime = System.currentTimeMillis()
+            pausedDuration = 0
+            timerRunning = true
+            timerHandler.post(timerRunnable)
+
+            edtStart.setText((current + 1).toString())
+
+            sendNext()
+        }, 400)
     }
 
     private fun runFromHere() {
@@ -303,6 +331,107 @@ class FileFragment : Fragment(R.layout.frag_file) {
         val h = sec / 3600
         return if (h > 0) "%02d:%02d:%02d".format(h, m, s)
         else "%02d:%02d".format(m, s)
+    }
+
+    data class GcodeState(
+        var x: Double? = null,
+        var y: Double? = null,
+        var z: Double? = null,
+
+        var absolute: Boolean = true,
+        var unitMm: Boolean = true,
+        var wcs: String = "G54",
+
+        var spindleOn: Boolean = false,
+        var spindleDir: String? = null,
+        var spindleSpeed: Int? = null,
+
+        var feedZ: Double? = null,
+        var feedXY: Double? = null
+    )
+
+    fun scanStatePro(lines: List<String>, target: Int): GcodeState {
+        val st = GcodeState()
+
+        for (i in 0 until target) {
+            val l = lines[i].uppercase()
+                .replace(Regex("\\(.*?\\)"), "")
+                .trim()
+
+            if (l.contains("G90")) st.absolute = true
+            if (l.contains("G91")) st.absolute = false
+            if (l.contains("G21")) st.unitMm = true
+            if (l.contains("G20")) st.unitMm = false
+            Regex("G5[4-9]").find(l)?.let { st.wcs = it.value }
+            Regex("G1.*Z[-0-9.]+.*F([0-9.]+)").find(l)?.let {
+                st.feedZ = it.groupValues[1].toDouble()
+            }
+
+            Regex("G1.*[XY].*F([0-9.]+)").find(l)?.let {
+                st.feedXY = it.groupValues[1].toDouble()
+            }
+
+            if (l.contains("M3")) { st.spindleOn = true; st.spindleDir = "M3" }
+            if (l.contains("M4")) { st.spindleOn = true; st.spindleDir = "M4" }
+            if (l.contains("M5")) { st.spindleOn = false; st.spindleDir = null }
+            Regex("S(\\d+)").find(l)?.let { st.spindleSpeed = it.groupValues[1].toInt() }
+
+            fun axis(a: Char, cur: Double?): Double? {
+                val r = Regex("$a([-0-9.]+)").find(l) ?: return cur
+                val v = r.groupValues[1].toDouble()
+                return if (st.absolute || cur == null) v else cur + v
+            }
+
+            st.x = axis('X', st.x)
+            st.y = axis('Y', st.y)
+            st.z = axis('Z', st.z)
+        }
+        return st
+    }
+
+    fun buildRunFromHereHeader(st: GcodeState): List<String> {
+        val h = mutableListOf<String>()
+        h += if (st.unitMm) "G21" else "G20"
+        h += "G90"
+        h += st.wcs
+        h += "G53 G0 Z0"
+
+        if (st.x != null && st.y != null)
+            h += "G90 G0 X${st.x} Y${st.y}"
+
+        if (st.spindleOn && st.spindleDir != null) {
+            h += "${st.spindleDir} S${st.spindleSpeed ?: 12000}"
+        }
+
+        if (st.z != null)
+            h += "G90 G1 Z${st.z} F${st.feedZ ?: 300.0} "
+
+        st.feedXY?.let {
+            h += "F$it"
+        }
+        return h
+    }
+
+    private fun showRunFromHereWarning(index: Int) {
+        val lineNo = index + 1
+        val lineText = lines.getOrNull(index)?.take(40) ?: ""
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("⚠ Run From Here")
+            .setMessage(
+                "Run dari baris $lineNo\n\n" +
+                        "⚠ Pastikan:\n" +
+                        "• Z Axis aman\n" +
+                        "• Spindle sudah ON\n" +
+                        "• Work Offset (G54) benar\n\n" +
+                        "G-code:\n$lineText\n\n" +
+                        "Lanjutkan?"
+            )
+            .setPositiveButton("RUN") { _, _ ->
+                runFromHere(index)
+            }
+            .setNegativeButton("BATAL", null)
+            .show()
     }
 
 }

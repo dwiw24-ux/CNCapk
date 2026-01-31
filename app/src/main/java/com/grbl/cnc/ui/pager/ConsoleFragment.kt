@@ -18,10 +18,7 @@ class ConsoleFragment : Fragment(R.layout.frag_console) {
 
     private var isStartupDone = false
     private var verboseEnabled = false
-    private var autoShowSettings = true
     private var receivingSettings = false
-
-    private var startupOkReceived = false
     private var waitingCommandOk = false
 
     private lateinit var txtConsole: TextView
@@ -90,7 +87,6 @@ class ConsoleFragment : Fragment(R.layout.frag_console) {
         if (main.pendingGrblConnect) {
             main.pendingGrblConnect = false
             receivingSettings = true
-            main.btService.send("$$\n")
             showStartupHeader()
         }
     }
@@ -99,11 +95,10 @@ class ConsoleFragment : Fragment(R.layout.frag_console) {
         if (isStartupDone) return
         isStartupDone = true
 
-        val name = (activity as? MainActivity)
-            ?.btService
-            ?.connectedDeviceName ?: "GRBL Device"
-
-        appendSystem("<< Device : $name")
+        (activity as? MainActivity)?.btService?.send("\$I\n")
+        (activity as? MainActivity)?.btService?.send("\$G\n")
+        (activity as? MainActivity)?.btService?.send("$#\n")
+        (activity as? MainActivity)?.btService?.send("$$\n")
     }
 
     private fun appendSystem(text: String) {
@@ -146,25 +141,13 @@ class ConsoleFragment : Fragment(R.layout.frag_console) {
                 } else {
                     if (         // realtime status
                         text.startsWith("$",true) ||
-                        text.startsWith("error", true) ||
-                        text.startsWith("ALARM", true) ||
-                        text.startsWith("[MSG:", true) ||
+                        text.startsWith("G", true) ||
+                        text.startsWith("[", true) ||
                         text.startsWith("Grbl", true)
                     ) {
                         if (text.startsWith("Grbl")) {
                             appendRx(text)
                             showStartupHeader()
-                            return@forEach
-                        }
-
-                        if (!startupOkReceived && text == "ok") {
-                            startupOkReceived = true
-
-                            if (autoShowSettings) {
-                                receivingSettings = true
-                                appendSystem("Requesting GRBL settings ($$)")
-                                (activity as? MainActivity)?.btService?.send("$$\n")
-                            }
                             return@forEach
                         }
                         appendRx(text)

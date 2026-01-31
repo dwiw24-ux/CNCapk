@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:padding="12dp"
     android:layout_width="match_parent"
@@ -54,6 +56,7 @@
             android:layout_row="0"
             android:layout_column="1"
             android:scaleType="centerInside"
+            android:layout_margin="2dp"
             style="@style/jogImgBtnDark"/>
         <ImageButton
             android:id="@+id/btnZPlus"
@@ -62,6 +65,7 @@
             android:layout_row="0"
             android:layout_column="4"
             android:scaleType="centerInside"
+            android:layout_margin="2dp"
             style="@style/jogImgBtnDark"/>
         <ImageButton
             android:id="@+id/btnXMinus"
@@ -70,6 +74,7 @@
             android:layout_row="1"
             android:layout_column="0"
             android:scaleType="centerInside"
+            android:layout_margin="2dp"
             style="@style/jogImgBtnDark"/>
         <ImageButton
             android:id="@+id/btnHoming"
@@ -78,6 +83,7 @@
             android:layout_row="1"
             android:layout_column="1"
             android:scaleType="centerInside"
+            android:layout_margin="2dp"
             style="@style/jogImgBtnDark"/>
         <ImageButton
             android:id="@+id/btnXPlus"
@@ -86,6 +92,7 @@
             android:layout_row="1"
             android:layout_column="2"
             android:scaleType="centerInside"
+            android:layout_margin="2dp"
             style="@style/jogImgBtnDark"/>
         <ImageButton
             android:id="@+id/btnStop"
@@ -94,6 +101,7 @@
             android:layout_row="1"
             android:layout_column="4"
             android:scaleType="centerInside"
+            android:layout_margin="2dp"
             style="@style/jogImgBtnDark"/>
         <ImageButton
             android:id="@+id/btnYMinus"
@@ -102,6 +110,7 @@
             android:layout_row="2"
             android:layout_column="1"
             android:scaleType="centerInside"
+            android:layout_margin="2dp"
             style="@style/jogImgBtnDark"/>
         <ImageButton
             android:id="@+id/btnZMinus"
@@ -110,7 +119,144 @@
             android:layout_row="2"
             android:layout_column="4"
             android:scaleType="centerInside"
+            android:layout_margin="2dp"
             style="@style/jogImgBtnDark"/>
 
     </GridLayout>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp">
+
+        <Button
+            android:id="@+id/jogGo0"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_marginHorizontal="2dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_btn_square_selector"
+            android:text="GO-0"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            app:backgroundTint="@null"
+            android:textAlignment="center"/>
+
+        <Button
+            android:id="@+id/jogAll0"
+            android:text="ALL0"
+            android:textSize="12sp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_btn_square_selector"
+            app:backgroundTint="@null"
+            android:textColor="@color/text_primary"
+            android:layout_marginHorizontal="2dp"/>
+
+        <Button
+            android:id="@+id/jogX0"
+            android:text="X0"
+            android:textSize="12sp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_btn_square_selector"
+            app:backgroundTint="@null"
+            android:textColor="@color/text_primary"
+            android:layout_marginHorizontal="2dp"/>
+
+        <Button
+            android:id="@+id/jogY0"
+            android:text="Y0"
+            android:textSize="12sp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_btn_square_selector"
+            app:backgroundTint="@null"
+            android:textColor="@color/text_primary"
+            android:layout_marginHorizontal="2dp"/>
+
+        <Button
+            android:id="@+id/jogZ0"
+            android:text="Z0"
+            android:textSize="12sp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_btn_square_selector"
+            app:backgroundTint="@null"
+            android:textColor="@color/text_primary"
+            android:layout_marginHorizontal="2dp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp">
+
+        <Button
+            android:id="@+id/g54"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_marginHorizontal="2dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_btn_square_selector"
+            android:text="54"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            app:backgroundTint="@null"
+            android:textAlignment="center"/>
+
+        <Button
+            android:id="@+id/g55"
+            android:text="55"
+            android:textSize="12sp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_btn_square_selector"
+            app:backgroundTint="@null"
+            android:textColor="@color/text_primary"
+            android:layout_marginHorizontal="2dp"/>
+
+        <Button
+            android:id="@+id/g56"
+            android:text="56"
+            android:textSize="12sp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_btn_square_selector"
+            app:backgroundTint="@null"
+            android:textColor="@color/text_primary"
+            android:layout_marginHorizontal="2dp"/>
+
+        <Button
+            android:id="@+id/g57"
+            android:text="57"
+            android:textSize="12sp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_btn_square_selector"
+            app:backgroundTint="@null"
+            android:textColor="@color/text_primary"
+            android:layout_marginHorizontal="2dp"/>
+
+        <Button
+            android:id="@+id/g58"
+            android:text="58"
+            android:textSize="12sp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_btn_square_selector"
+            app:backgroundTint="@null"
+            android:textColor="@color/text_primary"
+            android:layout_marginHorizontal="2dp"/>
+    </LinearLayout>
 </LinearLayout>

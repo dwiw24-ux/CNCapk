@@ -33,6 +33,7 @@
         android:id="@+id/scrollConsole"
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:padding="12dp"
         android:layout_weight="1"
         android:fillViewport="true">
 
@@ -49,6 +50,7 @@
     <!-- INPUT BAR -->
     <LinearLayout
         android:orientation="horizontal"
+        android:padding="12dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
