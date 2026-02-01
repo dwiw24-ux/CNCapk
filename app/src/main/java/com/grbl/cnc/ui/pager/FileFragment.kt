@@ -100,6 +100,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 pauseStart = System.currentTimeMillis()
             } else if (runMode == RunMode.PAUSED) {
                 bt.send("~")
+                bt.send("G90\n")
                 pausedDuration += System.currentTimeMillis() - pauseStart
                 //paused = false
                 runMode = RunMode.RUNNING
@@ -114,8 +115,8 @@ class FileFragment : Fragment(R.layout.frag_file) {
             timerRunning = false
             current = lines.size
             timerHandler.removeCallbacks(timerRunnable)
-            progressBar.progress = 100
-            txtProgress.text = "100 %"
+            progressBar.progress = 0
+            txtProgress.text = "0 %"
         }
         view.findViewById<Button>(R.id.btnRunFromHere).setOnClickListener {
             if (runMode != RunMode.IDLE) return@setOnClickListener
@@ -297,16 +298,20 @@ class FileFragment : Fragment(R.layout.frag_file) {
             timerRunning = true
             timerHandler.post(timerRunnable)
 
+            adapter.activeLine = current
+            adapter.notifyItemChanged(current)
+            rv.scrollToPosition(current)
+
             edtStart.setText((current + 1).toString())
 
             sendNext()
         }, 400)
     }
 
-    private fun runFromHere() {
-        val idx = edtStart.text.toString().toIntOrNull()?.minus(1) ?: return
-        runFromHere(idx)
-    }
+    //private fun runFromHere() {
+       // val idx = edtStart.text.toString().toIntOrNull()?.minus(1) ?: return
+       // runFromHere(idx)
+    //}
 
     private fun getFileName(uri: Uri): String {
         var name = "unknown.gcode"

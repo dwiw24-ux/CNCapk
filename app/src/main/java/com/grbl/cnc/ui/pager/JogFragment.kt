@@ -91,12 +91,6 @@ class JogFragment : Fragment(R.layout.frag_jog) {
                 (activity as? MainActivity)?.btService?.send("G53 G0 Z0\n")
                 (activity as? MainActivity)?.btService?.send("G90 G0 X0 Y0\n")
                 (activity as? MainActivity)?.btService?.send("G90 G0 Z0\n")
-                //(activity as? MainActivity)?.btService?.send(
-                  //  """G90
-                  //  G53 GO Z0
-                   // G90 G0 X0 Y0
-                  //  G90 G0 Z0
-                //""".trimIndent())
             }
         view.findViewById<Button>(R.id.jogAll0)
             .setOnClickListener {
