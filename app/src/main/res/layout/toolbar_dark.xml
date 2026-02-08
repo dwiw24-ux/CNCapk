@@ -4,19 +4,38 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
 
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="?attr/actionBarSize"
-    android:background="#1565C0"
+    android:background="#5115C0"
     android:theme="@style/ThemeOverlay.AppCompat.Dark">
 
-    <TextView
-        android:text="Dwi Creative CNC"
-        android:textColor="#FFFFFF"
-        android:textSize="18sp"
-        android:textStyle="bold|italic"
-        android:layout_gravity="start|center_vertical"
+    <LinearLayout
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <TextView
+            android:text="Dwi Creative CNC"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold|italic"
+            android:gravity="center_vertical"
+            android:layout_weight="1"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            tools:ignore="HardcodedText" />
+
+        <TextView
+            android:id="@+id/txtStatus"
+            android:text="BT Disconnected"
+            android:textColor="#FFFFFF"
+            android:gravity="center_vertical"
+            android:layout_weight="1"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            tools:ignore="HardcodedText" />
+    </LinearLayout>
 
     <LinearLayout
         android:layout_gravity="end"
@@ -32,7 +51,8 @@
             android:padding="12dp"
             android:src="@drawable/ic_alarm"
             app:tint="#FFFFFF"
-            android:contentDescription="UNLOCK" />
+            android:contentDescription="UNLOCK"
+            tools:ignore="HardcodedText" />
 
         <ImageButton
             android:id="@+id/btnBluetooth"
@@ -42,7 +62,8 @@
             android:padding="12dp"
             android:background="#00FFFFFF"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content"
+            tools:ignore="HardcodedText" />
 
         <ImageButton
             android:id="@+id/btnPower"
@@ -52,7 +73,8 @@
             android:padding="12dp"
             android:background="#00FFFFFF"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content"
+            tools:ignore="HardcodedText" />
 
         <ImageButton
             android:id="@+id/btnMenu"
@@ -62,7 +84,8 @@
             android:padding="12dp"
             android:background="#00FFFFFF"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content"
+            tools:ignore="HardcodedText" />
 
     </LinearLayout>
 

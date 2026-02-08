@@ -17,8 +17,8 @@ class JogFragment : Fragment(R.layout.frag_jog) {
     private var isHolding = false
     private var downTime = 0L
 
-    private val TAP_THRESHOLD = 200L   // ms
-    private val CONTINUOUS_INTERVAL = 120L
+    private val tapThreshold = 200L   // ms
+    private val continuousInterval = 120L
     private var jogHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private var jogRunnable: Runnable? = null
     private var step = 1.0
@@ -123,16 +123,47 @@ class JogFragment : Fragment(R.layout.frag_jog) {
                 (activity as? MainActivity)?.btService?.send("G56\n")
                 (activity as? MainActivity)?.btService?.send("\$G\n")
             }
-        view.findViewById<Button>(R.id.g57)
-            .setOnClickListener {
-                (activity as? MainActivity)?.btService?.send("G57\n")
-                (activity as? MainActivity)?.btService?.send("\$G\n")
-            }
-        view.findViewById<Button>(R.id.g58)
-            .setOnClickListener {
-                (activity as? MainActivity)?.btService?.send("G58\n")
-                (activity as? MainActivity)?.btService?.send("\$G\n")
-            }
+        view.findViewById<Button>(R.id.g57).setOnClickListener {
+            (activity as? MainActivity)?.btService?.send("G57\n")
+            (activity as? MainActivity)?.btService?.send("\$G\n")
+        }
+        view.findViewById<Button>(R.id.btnProbe).setOnClickListener {
+
+            val feedFast = 100
+            val feedSlow = feedFast / 2
+            val dist = 50.0
+            val plate = 1.5
+            val retract = 5.0
+
+            val bt = (activity as? MainActivity)?.btService ?: return@setOnClickListener
+
+
+            Thread {
+                bt.send("G91\n")
+                Thread.sleep(500)
+
+                bt.send("G38.2 Z-${dist} F$feedFast\n")
+                Thread.sleep(300)
+
+                bt.send("G10 L20 P1 Z$plate\n")
+                Thread.sleep(120)
+
+                bt.send("G0 Z$retract\n")
+                Thread.sleep(500)
+
+                bt.send("G38.2 2Z-${dist} F$feedSlow\n")
+                Thread.sleep(400)
+
+                bt.send("G10 L20 P1 Z$plate\n")
+                Thread.sleep(120)
+
+                bt.send("G0 Z$retract\n")
+                Thread.sleep(120)
+
+                bt.send("G90\n")
+
+            }.start()
+        }
     }
 
     private fun sendJog(axis: String, dir: Int) {
@@ -172,10 +203,10 @@ class JogFragment : Fragment(R.layout.frag_jog) {
                         isHolding = true
 
                         sendJog(axis, dir)
-                        jogHandler.postDelayed(jogRunnable!!, CONTINUOUS_INTERVAL)
+                        jogHandler.postDelayed(jogRunnable!!, continuousInterval)
                     }
 
-                    jogHandler.postDelayed(jogRunnable!!, TAP_THRESHOLD)
+                    jogHandler.postDelayed(jogRunnable!!, tapThreshold)
                 }
 
                 MotionEvent.ACTION_UP,
@@ -185,7 +216,7 @@ class JogFragment : Fragment(R.layout.frag_jog) {
 
                     val elapsed = System.currentTimeMillis() - downTime
 
-                    if (!isHolding && elapsed < TAP_THRESHOLD) {
+                    if (!isHolding && elapsed < tapThreshold) {
                         // 👉 TAP
                         sendJog(axis, dir)
                     }

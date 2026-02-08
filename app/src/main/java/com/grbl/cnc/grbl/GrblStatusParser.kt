@@ -18,6 +18,7 @@ object GrblStatusParser {
             var hasWPos = false
             var feed = 0
             var spindle = 0
+            var pin: String? = null
 
             for (p in parts) {
                 when {
@@ -48,6 +49,9 @@ object GrblStatusParser {
                         feed = fs[0].toInt()
                         spindle = fs[1].toInt()
                     }
+                    p.startsWith("Pn:") -> {
+                        pin = p.substring(3) // contoh: "XZ"
+                    }
                 }
             }
 
@@ -67,7 +71,7 @@ object GrblStatusParser {
                 state,
                 mpos[0], mpos[1], mpos[2],
                 wpos[0], wpos[1], wpos[2],
-                feed, spindle
+                feed, spindle, pin
             )
 
         } catch (e: Exception) {

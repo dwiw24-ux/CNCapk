@@ -27,6 +27,9 @@
         android:theme="@style/Theme.DwiCreativeCNC">
         <activity
             android:name=".ui.MainActivity"
+            android:screenOrientation="portrait"
+            android:resizeableActivity="false"
+            android:windowSoftInputMode="adjustPan"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

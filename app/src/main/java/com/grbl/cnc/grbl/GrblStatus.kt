@@ -9,5 +9,6 @@ data class GrblStatus(
     val wposY: Double,
     val wposZ: Double,
     val feed: Int,
-    val spindle: Int
+    val spindle: Int,
+    val pin: String?
 )

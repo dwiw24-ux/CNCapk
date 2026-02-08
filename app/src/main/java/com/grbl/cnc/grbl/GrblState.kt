@@ -1,11 +1,11 @@
 package com.grbl.cnc.grbl
 
 enum class GrblState {
-    IDLE,
-    RUN,
-    HOLD,
-    JOG,
-    ALARM,
-    HOMING,
-    UNKNOWN
+    Idle,
+    Run,
+    Hold,
+    Jog,
+    Alarm,
+    Homing,
+    Unknown
 }

@@ -31,6 +31,8 @@ class FileFragment : Fragment(R.layout.frag_file) {
     private lateinit var txtProgress: TextView
     private lateinit var txtEta: TextView
     private lateinit var edtStart: EditText
+    private lateinit var txtFeedOv: TextView
+    private lateinit var txtSpinOv: TextView
     private lateinit var rv: RecyclerView
     private lateinit var adapter: GcodeAdapter
     private var currentFileName = ""
@@ -113,10 +115,18 @@ class FileFragment : Fragment(R.layout.frag_file) {
             runMode = RunMode.IDLE
             paused = true
             timerRunning = false
+
             current = lines.size
             timerHandler.removeCallbacks(timerRunnable)
             progressBar.progress = 0
             txtProgress.text = "0 %"
+
+            feedOv = 100
+            (activity as? MainActivity)?.btService?.sendRealtime(0x90.toByte())
+            txtFeedOv.text = "100%"
+            spinOv = 100
+            (activity as? MainActivity)?.btService?.sendRealtime(0x99.toByte())
+            txtSpinOv.text = "100%"
         }
         view.findViewById<Button>(R.id.btnRunFromHere).setOnClickListener {
             if (runMode != RunMode.IDLE) return@setOnClickListener
@@ -130,7 +140,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
         }
 
         // ===== FEED OVERRIDE =====
-        val txtFeedOv = view.findViewById<TextView>(R.id.txtFeedOv)
+        txtFeedOv = view.findViewById(R.id.txtFeedOv)
         view.findViewById<Button>(R.id.btnFeedMinus).setOnClickListener {
             if (feedOv > 10) {
                 feedOv -= 10
@@ -140,7 +150,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
         }
 
         view.findViewById<Button>(R.id.btnFeedPlus).setOnClickListener {
-            if (feedOv < 400) {
+            if (feedOv < 200) {
                 feedOv += 10
                 (activity as? MainActivity)?.btService?.sendRealtime(0x91.toByte()) // Feed +
                 txtFeedOv.text = "$feedOv%"
@@ -153,7 +163,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
             txtFeedOv.text = "100%"
         }
 
-        val txtSpinOv = view.findViewById<TextView>(R.id.txtSpinOv)
+        txtSpinOv = view.findViewById(R.id.txtSpinOv)
 
         view.findViewById<Button>(R.id.btnSpinMinus).setOnClickListener {
             if (spinOv > 10) {
@@ -183,13 +193,19 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 //if (runMode != RunMode.RUNNING || !waitingOk) return@runOnUiThread
 
                 waitingOk = false
-                current++
+                //current++
+
+                // ==== JIKA FILE SUDAH SELESAI ====
+                if (sendQueue.isEmpty() && current >= lines.size) {
+                    stopRunFinished()
+                    return@runOnUiThread
+                }
 
                 if (runMode == RunMode.RUNNING) {
                     sendNext()
                 }
 
-                val percent = (((current + 1).toFloat() / lines.size) * 100).toInt()
+                val percent = ((current.toFloat() / lines.size) * 100).toInt()
                 progressBar.progress = percent
                 txtProgress.text = "$percent %"
 
@@ -197,7 +213,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 adapter.notifyItemChanged(current)
                 rv.scrollToPosition(current)
 
-                edtStart.setText((current + 1).toString())
+                edtStart.setText(current.toString())
             }
         }
     }
@@ -267,6 +283,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
         waitingOk = true
         val cmd = sendQueue.removeFirst()
         (activity as? MainActivity)?.btService?.send(cmd + "\n")
+        current++
     }
 
     private fun runFromHere(index: Int) {
@@ -302,16 +319,11 @@ class FileFragment : Fragment(R.layout.frag_file) {
             adapter.notifyItemChanged(current)
             rv.scrollToPosition(current)
 
-            edtStart.setText((current + 1).toString())
+            edtStart.setText(current.toString())
 
             sendNext()
         }, 400)
     }
-
-    //private fun runFromHere() {
-       // val idx = edtStart.text.toString().toIntOrNull()?.minus(1) ?: return
-       // runFromHere(idx)
-    //}
 
     private fun getFileName(uri: Uri): String {
         var name = "unknown.gcode"
@@ -437,6 +449,25 @@ class FileFragment : Fragment(R.layout.frag_file) {
             }
             .setNegativeButton("BATAL", null)
             .show()
+    }
+
+    private fun stopRunFinished() {
+        runMode = RunMode.IDLE
+        timerRunning = false
+        waitingOk = false
+
+        timerHandler.removeCallbacks(timerRunnable)
+
+        //txtEta.text = "Run Time: ✔ Done"
+        progressBar.progress = 100
+        txtProgress.text = "100 %"
+
+        feedOv = 100
+        (activity as? MainActivity)?.btService?.sendRealtime(0x90.toByte())
+        txtFeedOv.text = "100%"
+        spinOv = 100
+        (activity as? MainActivity)?.btService?.sendRealtime(0x99.toByte())
+        txtSpinOv.text = "100%"
     }
 
 }

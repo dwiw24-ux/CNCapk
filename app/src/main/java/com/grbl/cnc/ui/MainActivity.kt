@@ -17,6 +17,7 @@ import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.grbl.cnc.bluetooth.BluetoothService
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.Button
@@ -27,7 +28,6 @@ import androidx.annotation.RequiresPermission
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.grbl.cnc.grbl.GrblState
 import com.grbl.cnc.grbl.GrblStatus
 import com.grbl.cnc.ui.pager.ConsoleFragment
 import java.util.Locale
@@ -50,13 +50,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var txtwposZ: TextView
     private lateinit var txtFeed: TextView
     private lateinit var txtSpindle: TextView
-
+    private lateinit var txtLimX: TextView
+    private lateinit var txtLimY: TextView
+    private lateinit var txtLimZ: TextView
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
-
     lateinit var btService: BluetoothService
     lateinit var consoleFragment: ConsoleFragment
 
-
+    @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -73,10 +74,10 @@ class MainActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 showExitDialog()
-                //handleExit()
             }
         })
 
+        txtStatus = findViewById(R.id.txtStatus)
         txtStatusGrbl = findViewById(R.id.txtStatusGrbl)
         txtWcs = findViewById(R.id.txtWcs)
 
@@ -91,6 +92,11 @@ class MainActivity : AppCompatActivity() {
         txtFeed = findViewById(R.id.txtFeed)
         txtSpindle = findViewById(R.id.txtSpindle)
 
+        txtLimX = findViewById(R.id.txtLimX)
+        txtLimY = findViewById(R.id.txtLimY)
+        txtLimZ = findViewById(R.id.txtLimZ)
+
+
         txtwposX.setOnClickListener { showWPosDialog('X') }
         txtwposY.setOnClickListener { showWPosDialog('Y') }
         txtwposZ.setOnClickListener { showWPosDialog('Z') }
@@ -104,10 +110,11 @@ class MainActivity : AppCompatActivity() {
 
         TabLayoutMediator(tabLayout, viewPager) { tab, pos ->
             tab.text = when (pos) {
-                0 -> "Jog"
-                1 -> "Probe"
-                2 -> "File"
-                else -> "Console"
+                0 -> "JOG"
+                1 -> "PROBE"
+                2 -> "FILE"
+                3 -> "EDITOR"
+                else -> "CONSOLE"
             }
         }.attach()
 
@@ -115,17 +122,16 @@ class MainActivity : AppCompatActivity() {
 
         btService.onConnected = {
             runOnUiThread {
-                txtStatusGrbl.text = "Connected"
+                txtStatus.text = "BT Connected"
                 pendingGrblConnect = true
             }
             handler.post(statusRunnable)
         }
 
-
         btService.onDisconnected = {
             handler.removeCallbacks(statusRunnable)
             runOnUiThread {
-                txtStatusGrbl.text = "Disconnected"
+                txtStatus.text = "BT Disconnected"
             }
         }
 
@@ -139,7 +145,6 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread { handleGrblLine(line) }
         }
 
-        /** 🔥 RAW → CONSOLE */
         btService.addRawListener { raw ->
             runOnUiThread {
                 consoleFragment.append(raw)
@@ -226,17 +231,48 @@ class MainActivity : AppCompatActivity() {
     private fun updateStatusUI(s: GrblStatus) {
 
         txtStatusGrbl.text = "${s.state}"
+        txtStatusGrbl.setTextColor(
+            when (s.state) {
+                "Idle" -> 0xFF00E676.toInt()
+                "Run" -> 0xFFFFC107.toInt()
+                "Home" -> 0xFFFFC107.toInt()
+                "Probe" -> 0xFFFFC107.toInt()
+                "Alarm" -> 0xFFFF1744.toInt()
+                "Hold:0" -> 0xFFFF1744.toInt()
+                else -> 0xFFFFFFFF.toInt()
+            }
+        )
 
         txtmposX.text = String.format(Locale.US, " %.3f ", s.mposX)
         txtmposY.text = String.format(Locale.US, " %.3f ", s.mposY)
         txtmposZ.text = String.format(Locale.US, " %.3f ", s.mposZ)
 
-        txtwposX.text = String.format(Locale.US, " %.3f ", s.wposX)
-        txtwposY.text = String.format(Locale.US, " %.3f ", s.wposY)
-        txtwposZ.text = String.format(Locale.US, " %.3f ", s.wposZ)
+        txtwposX.text = String.format(Locale.US, " %.3f ✎", s.wposX)
+        txtwposY.text = String.format(Locale.US, " %.3f ✎", s.wposY)
+        txtwposZ.text = String.format(Locale.US, " %.3f ✎", s.wposZ)
 
-        txtFeed.text = String.format(Locale.US, "F : %d", s.feed)
-        txtSpindle.text = String.format(Locale.US, "S : %d", s.spindle)
+        txtFeed.text = String.format(Locale.US, "Feed: %d", s.feed)
+        txtSpindle.text = String.format(Locale.US, "Spin: %d", s.spindle)
+
+        // === LIMIT SWITCH ===
+        updateLimitUI(s.pin)
+    }
+
+    private fun updateLimitUI(pin: String?) {
+
+        val active = pin ?: ""
+
+        setLimitColor(txtLimX, active.contains("X"))
+        setLimitColor(txtLimY, active.contains("Y"))
+        setLimitColor(txtLimZ, active.contains("Z"))
+    }
+
+    private fun setLimitColor(view: TextView, triggered: Boolean) {
+        if (triggered) {
+            view.setTextColor(0xFFFF1744.toInt())      // merah terang
+        } else {
+            view.setTextColor(0xFF00E676.toInt())      // hijau
+        }
     }
 
     private val statusRunnable = object : Runnable {
@@ -251,46 +287,12 @@ class MainActivity : AppCompatActivity() {
     private fun showExitDialog() {
         MaterialAlertDialogBuilder(this)
             .setTitle("Keluar Aplikasi")
-            .setMessage("Yakin ingin keluar dari Dwi Creative CNC?")
+            .setMessage("Yakin ingin keluar ?")
             .setPositiveButton("Keluar") { _, _ ->
+                btService.sendRealtime(0X18.toByte())
                 finishAffinity()
             }
             .setNegativeButton("Batal", null)
-            .show()
-    }
-
-    private var currentGrblState = GrblState.UNKNOWN
-    fun onGrblStatusUpdate(state: GrblState) {
-        currentGrblState = state
-    }
-
-    private fun handleExit() {
-        if (currentGrblState == GrblState.RUN) {
-            showRunningBlockedDialog()
-        } else {
-            showExitConfirm()
-        }
-    }
-
-    private fun showExitConfirm() {
-        MaterialAlertDialogBuilder(this)
-            .setTitle("Keluar Aplikasi")
-            .setMessage("Mesin dalam keadaan idle.\nKeluar dari Dwi Creative CNC?")
-            .setPositiveButton("Keluar") { _, _ ->
-                finishAffinity()
-            }
-            .setNegativeButton("Batal", null)
-            .show()
-    }
-
-    private fun showRunningBlockedDialog() {
-        MaterialAlertDialogBuilder(this)
-            .setTitle("Mesin Sedang Berjalan")
-            .setMessage(
-                "CNC masih aktif (${currentGrblState.name}).\n" +
-                        "Hentikan proses sebelum keluar."
-            )
-            .setPositiveButton("OK", null)
             .show()
     }
 
@@ -306,10 +308,10 @@ class MainActivity : AppCompatActivity() {
             line.contains("G59") -> "G59"
             else -> "-"
         }
-
         txtWcs.text = wcs
     }
 
+    @SuppressLint("SetTextI18n")
     fun showWPosDialog(axis: Char) {
         val view = layoutInflater.inflate(R.layout.dialog_set_wpos, null)
 
@@ -321,7 +323,6 @@ class MainActivity : AppCompatActivity() {
         val txtAxis = view.findViewById<TextView>(R.id.txtAxis) ?: return
         val edtValue = view.findViewById<EditText>(R.id.edtValue) ?: return
         val btnSet = view.findViewById<Button>(R.id.btnSet) ?: return
-        val btnZero = view.findViewById<Button>(R.id.btnZero) ?: return
         val btnCancel = view.findViewById<Button>(R.id.btnCancel) ?: return
 
         txtAxis.text = "Set WPos $axis"
@@ -335,24 +336,13 @@ class MainActivity : AppCompatActivity() {
             val value = edtValue.text.toString().trim()
             if (value.isEmpty()) return@setOnClickListener
 
-            btService.send("G10 L20 P1 $axis $value\n")
-            dialog.dismiss()
-        }
-
-        btnZero.setOnClickListener {
-            if (!btService.isConnected) {
-                Toast.makeText(this, "Bluetooth not connected", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            btService.send("G10 L20 P1 ${axis} 0\n")
+            btService.send("G10 L20 P0 $axis $value\n")
             dialog.dismiss()
         }
 
         btnCancel.setOnClickListener {
             dialog.dismiss()
         }
-
         dialog.show()
     }
 }

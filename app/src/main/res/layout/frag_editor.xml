@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="DIMENSI"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#00E676"
+            android:gravity="center"/>
+
+        <EditText
+            android:id="@+id/edtWidth"
+            android:hint="Width (mm)"
+            android:textSize="12sp"
+            android:background="@android:color/transparent"
+            android:inputType="numberDecimal"
+            android:padding="6dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <EditText
+            android:id="@+id/edtHeight"
+            android:hint="Height (mm)"
+            android:textSize="12sp"
+            android:background="@android:color/transparent"
+            android:inputType="numberDecimal"
+            android:padding="6dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <EditText
+            android:id="@+id/edtDepth"
+            android:hint="Depth (mm)"
+            android:textSize="12sp"
+            android:background="@android:color/transparent"
+            android:inputType="numberDecimal"
+            android:padding="6dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="TOOLPATH"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#00E676"
+            android:gravity="center"/>
+
+        <EditText
+            android:id="@+id/edtTool"
+            android:hint="Tool Diameter (mm)"
+            android:textSize="12sp"
+            android:background="@android:color/transparent"
+            android:inputType="numberDecimal"
+            android:padding="6dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <EditText
+            android:id="@+id/edtStepDown"
+            android:hint="Step Down (mm)"
+            android:textSize="12sp"
+            android:background="@android:color/transparent"
+            android:inputType="numberDecimal"
+            android:padding="6dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <EditText
+            android:id="@+id/edtFeed"
+            android:hint="Feed Rate (mm/min)"
+            android:textSize="12sp"
+            android:background="@android:color/transparent"
+            android:inputType="number"
+            android:padding="6dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <EditText
+            android:id="@+id/edtPlunge"
+            android:hint="Plunge Rate (mm/min)"
+            android:textSize="12sp"
+            android:background="@android:color/transparent"
+            android:inputType="number"
+            android:padding="6dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <Button
+            android:id="@+id/btnSavePocket"
+            android:text="SAVE GCODE"
+            android:textSize="10sp"
+            android:textColor="@color/text_primary"
+            android:background="@drawable/bg_btn_square_selector"
+            app:backgroundTint="@null"
+            android:layout_marginTop="8dp"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"/>
+
+    </LinearLayout>
+</ScrollView>

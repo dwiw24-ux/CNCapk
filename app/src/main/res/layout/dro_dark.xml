@@ -10,6 +10,7 @@
     <LinearLayout
         android:orientation="vertical"
         android:padding="12dp"
+        android:background="@drawable/scrollbar_thumb"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
@@ -20,7 +21,7 @@
 
             <TextView
                 android:id="@+id/txtStatusGrbl"
-                android:text="GRBL"
+                android:text="Unknown"
                 android:layout_weight="1"
                 android:textStyle="bold"
                 android:layout_width="0dp"
@@ -29,6 +30,7 @@
             <TextView
                 android:text="MPos"
                 android:textStyle="bold"
+                android:textColor="#00E676"
                 android:layout_weight="1"
                 android:gravity="center"
                 android:layout_width="0dp"
@@ -37,6 +39,7 @@
             <TextView
                 android:text="WPos"
                 android:textStyle="bold"
+                android:textColor="#00E676"
                 android:layout_weight="1"
                 android:gravity="end"
                 android:layout_width="0dp"
@@ -48,6 +51,7 @@
             android:layout_height="wrap_content">
 
             <TextView
+                android:id="@+id/txtLimX"
                 android:text="X"
                 android:layout_width="0dp"
                 android:layout_weight="1"
@@ -64,7 +68,7 @@
 
             <TextView
                 android:id="@+id/txtwposX"
-                android:text="0,000 ✎"
+                android:text="0.000 ✎"
                 android:gravity="end"
                 android:layout_width="0dp"
                 android:layout_weight="1"
@@ -77,6 +81,7 @@
             android:layout_height="wrap_content">
 
             <TextView
+                android:id="@+id/txtLimY"
                 android:text="Y"
                 android:layout_width="0dp"
                 android:layout_weight="1"
@@ -93,7 +98,7 @@
 
             <TextView
                 android:id="@+id/txtwposY"
-                android:text="0,000 ✎"
+                android:text="0.000 ✎"
                 android:gravity="end"
                 android:clickable="true"
                 android:focusable="true"
@@ -108,6 +113,7 @@
             android:layout_height="wrap_content">
 
             <TextView
+                android:id="@+id/txtLimZ"
                 android:text="Z"
                 android:layout_width="0dp"
                 android:layout_weight="1"
@@ -124,7 +130,7 @@
 
             <TextView
                 android:id="@+id/txtwposZ"
-                android:text="0,000 ✎"
+                android:text="0.000 ✎"
                 android:gravity="end"
                 android:clickable="true"
                 android:focusable="true"
@@ -148,7 +154,7 @@
 
             <TextView
                 android:id="@+id/txtFeed"
-                android:text="Feed:0"
+                android:text="Feed: 0"
                 android:gravity="center"
                 android:layout_width="0dp"
                 android:layout_weight="1"
@@ -156,7 +162,7 @@
 
             <TextView
                 android:id="@+id/txtSpindle"
-                android:text="Spindle:0"
+                android:text="Spin: 0"
                 android:gravity="end"
                 android:layout_width="0dp"
                 android:layout_weight="1"
