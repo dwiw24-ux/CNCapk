@@ -17,7 +17,10 @@ class GcodeAdapter(
     inner class VH(val tv: TextView) : RecyclerView.ViewHolder(tv) {
         init {
             tv.setOnClickListener {
-                onClick(adapterPosition)
+                val pos = bindingAdapterPosition
+                if (pos != RecyclerView.NO_POSITION) {
+                    onClick(pos)
+                }
             }
         }
     }

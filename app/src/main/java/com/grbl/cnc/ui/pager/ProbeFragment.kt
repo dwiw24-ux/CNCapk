@@ -21,7 +21,7 @@ class ProbeFragment : Fragment(R.layout.frag_probe) {
 
         view.findViewById<Button>(R.id.btnSetZ).setOnClickListener {
             val plate = edtPlate.text.toString().toDoubleOrNull() ?: 0.0
-            bt?.send("G10 L20 P1 Z$plate\n")
+            bt?.send("G10 L20 P0 Z$plate\n")
             txtResult.text = "Z set to $plate\n"
         }
 
@@ -30,7 +30,7 @@ class ProbeFragment : Fragment(R.layout.frag_probe) {
         }
 
         view.findViewById<Button>(R.id.btnSetXY).setOnClickListener {
-            bt?.send("G10 L20 P1 X0 Y0\n")
+            bt?.send("G10 L20 P0 X0 Y0\n")
         }
 
         view.findViewById<Button>(R.id.btnGoZero).setOnClickListener {
@@ -51,26 +51,20 @@ class ProbeFragment : Fragment(R.layout.frag_probe) {
 
             Thread {
                 bt.send("G91\n")
-                Thread.sleep(120)
+                Thread.sleep(2000)
 
                 bt.send("G38.2 Z-${dist} F$feedFast\n")
-                Thread.sleep(300)
-
-                bt.send("G10 L20 P1 Z$plate\n")
-                Thread.sleep(120)
+                bt.send("G10 L20 P0 Z$plate\n")
+                Thread.sleep(3000)
 
                 bt.send("G0 Z$retract\n")
-                Thread.sleep(120)
+                Thread.sleep(2000)
 
                 bt.send("G38.2 Z-${dist} F$feedSlow\n")
-                Thread.sleep(400)
-
-                bt.send("G10 L20 P1 Z$plate\n")
-                Thread.sleep(120)
+                bt.send("G10 L20 P0 Z$plate\n")
+                Thread.sleep(4000)
 
                 bt.send("G0 Z$retract\n")
-                Thread.sleep(120)
-
                 bt.send("G90\n")
 
                 activity?.runOnUiThread {

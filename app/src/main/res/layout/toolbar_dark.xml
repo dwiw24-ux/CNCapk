@@ -3,8 +3,8 @@
 <androidx.appcompat.widget.Toolbar
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-
     xmlns:tools="http://schemas.android.com/tools"
+
     android:layout_width="match_parent"
     android:layout_height="?attr/actionBarSize"
     android:background="#5115C0"
@@ -80,6 +80,7 @@
             android:id="@+id/btnMenu"
             android:src="@drawable/ic_more"
             app:tint="#FFFFFF"
+            app:menu="@menu/menu_main"
             android:contentDescription="MENU"
             android:padding="12dp"
             android:background="#00FFFFFF"

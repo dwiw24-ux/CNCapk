@@ -14,9 +14,10 @@
 
     <TextView
         android:id="@+id/txtStep"
-        android:text="Step: 1.0 mm"
+        android:text="Step: 5.0 mm"
         android:textColor="#00E676"
-        android:textSize="14sp"
+        android:textSize="12sp"
+        android:paddingTop="12dp"
         android:layout_height="wrap_content"
         android:layout_width="wrap_content" />
 
@@ -30,9 +31,10 @@
 
     <TextView
         android:id="@+id/txtFeed"
-        android:text="Feed: 500 mm/menit"
+        android:text="Feed: 1000 mm/menit"
         android:textColor="#00E676"
-        android:textSize="14sp"
+        android:textSize="12sp"
+        android:paddingTop="12dp"
         android:layout_height="wrap_content"
         android:layout_width="wrap_content"/>
 

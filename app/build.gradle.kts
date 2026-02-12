@@ -9,6 +9,10 @@ android {
         version = release(36)
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.grbl.cnc"
         minSdk = 24
@@ -47,6 +51,7 @@ dependencies {
     implementation ("androidx.viewpager2:viewpager2:1.1.0")
     implementation ("com.google.android.material:material:1.11.0")
     implementation ("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.6")
+    implementation(libs.androidx.preference)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

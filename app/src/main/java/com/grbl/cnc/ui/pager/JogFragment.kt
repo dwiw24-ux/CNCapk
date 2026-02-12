@@ -16,13 +16,12 @@ class JogFragment : Fragment(R.layout.frag_jog) {
 
     private var isHolding = false
     private var downTime = 0L
-
     private val tapThreshold = 200L   // ms
     private val continuousInterval = 120L
     private var jogHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private var jogRunnable: Runnable? = null
-    private var step = 1.0
-    private var feed = 500
+    private var step = 5.0
+    private var feed = 1000
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -33,11 +32,9 @@ class JogFragment : Fragment(R.layout.frag_jog) {
         val seekStep = view.findViewById<SeekBar>(R.id.seekStep)
         val seekFeed = view.findViewById<SeekBar>(R.id.seekFeed)
 
-
-        seekStep.progress = 25 // default
+        seekStep.progress = 50 // default
 
         seekStep.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-
             override fun onProgressChanged(sb: SeekBar, p: Int, fromUser: Boolean) {
                 step = when {
                     p < 5 -> 0.1
@@ -48,7 +45,6 @@ class JogFragment : Fragment(R.layout.frag_jog) {
                 }
                 txtStep.text = "Step: $step mm"
             }
-
             override fun onStartTrackingTouch(sb: SeekBar) {}
             override fun onStopTrackingTouch(sb: SeekBar) {}
         })
@@ -56,12 +52,11 @@ class JogFragment : Fragment(R.layout.frag_jog) {
         seekFeed.progress = feed
 
         seekFeed.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-
+            @SuppressLint("SetTextI18n")
             override fun onProgressChanged(sb: SeekBar, p: Int, fromUser: Boolean) {
                 feed = maxOf(100, p)
                 txtFeed.text = "Feed: $feed mm/menit"
             }
-
             override fun onStartTrackingTouch(sb: SeekBar) {}
             override fun onStopTrackingTouch(sb: SeekBar) {}
         })
@@ -75,94 +70,68 @@ class JogFragment : Fragment(R.layout.frag_jog) {
         bindJogButton(view, R.id.btnZPlus, "Z", 1)
         bindJogButton(view, R.id.btnZMinus, "Z", -1)
 
-        view.findViewById<ImageButton>(R.id.btnHoming)
-            .setOnClickListener {
-                (activity as? MainActivity)?.btService?.send("\$H\n")
-            }
-
-        view.findViewById<ImageButton>(R.id.btnStop)
-            .setOnClickListener {
-                (activity as? MainActivity)?.btService?.sendRealtime(0x85.toByte())
-            }
-
-        view.findViewById<Button>(R.id.jogGo0)
-            .setOnClickListener {
-                (activity as? MainActivity)?.btService?.send("G90\n")
-                (activity as? MainActivity)?.btService?.send("G53 G0 Z0\n")
-                (activity as? MainActivity)?.btService?.send("G90 G0 X0 Y0\n")
-                (activity as? MainActivity)?.btService?.send("G90 G0 Z0\n")
-            }
-        view.findViewById<Button>(R.id.jogAll0)
-            .setOnClickListener {
-                (activity as? MainActivity)?.btService?.send("G10 L20 P0 X0Y0Z0\n")
-            }
-        view.findViewById<Button>(R.id.jogX0)
-            .setOnClickListener {
-                (activity as? MainActivity)?.btService?.send("G10 L20 P0 X0\n")
-            }
-        view.findViewById<Button>(R.id.jogY0)
-            .setOnClickListener {
-                (activity as? MainActivity)?.btService?.send("G10 L20 P0 Y0\n")
-            }
-        view.findViewById<Button>(R.id.jogZ0)
-            .setOnClickListener {
-                (activity as? MainActivity)?.btService?.send("G10 L20 P0 Z0\n")
-            }
-        view.findViewById<Button>(R.id.g54)
-            .setOnClickListener {
-                (activity as? MainActivity)?.btService?.send("G54\n")
-                (activity as? MainActivity)?.btService?.send("\$G\n")
-            }
-        view.findViewById<Button>(R.id.g55)
-            .setOnClickListener {
-                (activity as? MainActivity)?.btService?.send("G55\n")
-                (activity as? MainActivity)?.btService?.send("\$G\n")
-            }
-        view.findViewById<Button>(R.id.g56)
-            .setOnClickListener {
-                (activity as? MainActivity)?.btService?.send("G56\n")
-                (activity as? MainActivity)?.btService?.send("\$G\n")
-            }
+        view.findViewById<ImageButton>(R.id.btnHoming).setOnClickListener {
+            (activity as? MainActivity)?.btService?.send("\$H\n")
+        }
+        view.findViewById<ImageButton>(R.id.btnStop).setOnClickListener {
+            (activity as? MainActivity)?.btService?.sendRealtime(0x85.toByte())
+        }
+        view.findViewById<Button>(R.id.jogGo0).setOnClickListener {
+            (activity as? MainActivity)?.btService?.send("G90\n")
+            (activity as? MainActivity)?.btService?.send("G53 G0 Z0\n")
+            (activity as? MainActivity)?.btService?.send("G90 G0 X0 Y0\n")
+            (activity as? MainActivity)?.btService?.send("G90 G0 Z0\n")
+        }
+        view.findViewById<Button>(R.id.jogAll0).setOnClickListener {
+            (activity as? MainActivity)?.btService?.send("G10 L20 P0 X0Y0Z0\n")
+        }
+        view.findViewById<Button>(R.id.jogX0).setOnClickListener {
+            (activity as? MainActivity)?.btService?.send("G10 L20 P0 X0\n")
+        }
+        view.findViewById<Button>(R.id.jogY0).setOnClickListener {
+            (activity as? MainActivity)?.btService?.send("G10 L20 P0 Y0\n")
+        }
+        view.findViewById<Button>(R.id.jogZ0).setOnClickListener {
+            (activity as? MainActivity)?.btService?.send("G10 L20 P0 Z0\n")
+        }
+        view.findViewById<Button>(R.id.g54).setOnClickListener {
+            (activity as? MainActivity)?.btService?.send("G54\n")
+            (activity as? MainActivity)?.btService?.send("\$G\n")
+        }
+        view.findViewById<Button>(R.id.g55).setOnClickListener {
+            (activity as? MainActivity)?.btService?.send("G55\n")
+            (activity as? MainActivity)?.btService?.send("\$G\n")
+        }
+        view.findViewById<Button>(R.id.g56).setOnClickListener {
+            (activity as? MainActivity)?.btService?.send("G56\n")
+            (activity as? MainActivity)?.btService?.send("\$G\n")
+        }
         view.findViewById<Button>(R.id.g57).setOnClickListener {
             (activity as? MainActivity)?.btService?.send("G57\n")
             (activity as? MainActivity)?.btService?.send("\$G\n")
         }
         view.findViewById<Button>(R.id.btnProbe).setOnClickListener {
-
-            val feedFast = 100
-            val feedSlow = feedFast / 2
-            val dist = 50.0
-            val plate = 1.5
-            val retract = 5.0
-
             val bt = (activity as? MainActivity)?.btService ?: return@setOnClickListener
-
 
             Thread {
                 bt.send("G91\n")
-                Thread.sleep(500)
+                Thread.sleep(2000)
 
-                bt.send("G38.2 Z-${dist} F$feedFast\n")
-                Thread.sleep(300)
+                bt.send("G38.2 Z-50.000 F100\n")
+                bt.send("G10 L20 P0 Z1.500\n")
+                Thread.sleep(3000)
 
-                bt.send("G10 L20 P1 Z$plate\n")
-                Thread.sleep(120)
+                bt.send("G0 Z5.000\n")
+                Thread.sleep(2000)
 
-                bt.send("G0 Z$retract\n")
-                Thread.sleep(500)
+                bt.send("G38.2 Z-10.000 F50\n")
+                bt.send("G10 L20 P0 Z1.500\n")
+                Thread.sleep(4000)
 
-                bt.send("G38.2 2Z-${dist} F$feedSlow\n")
-                Thread.sleep(400)
-
-                bt.send("G10 L20 P1 Z$plate\n")
-                Thread.sleep(120)
-
-                bt.send("G0 Z$retract\n")
-                Thread.sleep(120)
-
+                bt.send("G0 Z5.000\n")
                 bt.send("G90\n")
-
-            }.start()
+            }
+                .start()
         }
     }
 
@@ -205,22 +174,18 @@ class JogFragment : Fragment(R.layout.frag_jog) {
                         sendJog(axis, dir)
                         jogHandler.postDelayed(jogRunnable!!, continuousInterval)
                     }
-
                     jogHandler.postDelayed(jogRunnable!!, tapThreshold)
                 }
 
                 MotionEvent.ACTION_UP,
                 MotionEvent.ACTION_CANCEL -> {
-
                     jogHandler.removeCallbacks(jogRunnable!!)
 
                     val elapsed = System.currentTimeMillis() - downTime
 
                     if (!isHolding && elapsed < tapThreshold) {
-                        // 👉 TAP
                         sendJog(axis, dir)
                     }
-
                     stopJog()
                     v.performClick()
                 }
@@ -228,5 +193,4 @@ class JogFragment : Fragment(R.layout.frag_jog) {
             true
         }
     }
-
 }

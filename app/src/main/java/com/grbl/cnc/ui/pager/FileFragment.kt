@@ -83,6 +83,23 @@ class FileFragment : Fragment(R.layout.frag_file) {
         txtProgress.text = "0 %"
         txtEta.text = "Run Time: 00:00"
 
+        edtStart.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val line = s.toString().toIntOrNull() ?: return
+                val index = line - 1
+
+                if (::adapter.isInitialized && index in lines.indices) {
+                    adapter.activeLine = index
+                    adapter.notifyDataSetChanged()
+                    rv.scrollToPosition(index)
+                }
+            }
+
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+
         rv = view.findViewById(R.id.rvGcode)
         rv.layoutManager = LinearLayoutManager(requireContext())
 
@@ -97,14 +114,14 @@ class FileFragment : Fragment(R.layout.frag_file) {
             val bt = (activity as? MainActivity)?.btService ?: return@setOnClickListener
             if (runMode == RunMode.RUNNING) {
                 bt.send("!")
-                //paused = true
+                paused = true
                 runMode = RunMode.PAUSED
                 pauseStart = System.currentTimeMillis()
             } else if (runMode == RunMode.PAUSED) {
                 bt.send("~")
                 bt.send("G90\n")
                 pausedDuration += System.currentTimeMillis() - pauseStart
-                //paused = false
+                paused = false
                 runMode = RunMode.RUNNING
             }
         }
@@ -115,6 +132,8 @@ class FileFragment : Fragment(R.layout.frag_file) {
             runMode = RunMode.IDLE
             paused = true
             timerRunning = false
+
+            (activity as? MainActivity)?.isStreaming = false
 
             current = lines.size
             timerHandler.removeCallbacks(timerRunnable)
@@ -234,7 +253,8 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
         adapter = GcodeAdapter(lines) { index ->
             if (runMode == RunMode.IDLE) {
-                showRunFromHereWarning(index)
+                edtStart.setText((index + 1).toString())
+                edtStart.setSelection(edtStart.text.length)
             }
         }
         rv.adapter = adapter
@@ -265,6 +285,8 @@ class FileFragment : Fragment(R.layout.frag_file) {
         paused = false
         waitingOk = false
         runMode = RunMode.RUNNING
+
+        (activity as? MainActivity)?.isStreaming = true
 
         startTime = System.currentTimeMillis()
         pausedDuration = 0
@@ -309,6 +331,8 @@ class FileFragment : Fragment(R.layout.frag_file) {
             current = index
             paused = false
             runMode = RunMode.RUNNING
+
+            (activity as? MainActivity)?.isStreaming = true
 
             startTime = System.currentTimeMillis()
             pausedDuration = 0
@@ -437,10 +461,9 @@ class FileFragment : Fragment(R.layout.frag_file) {
             .setTitle("⚠ Run From Here")
             .setMessage(
                 "Run dari baris $lineNo\n\n" +
-                        "⚠ Pastikan:\n" +
+                        "⚠ Pastikan:\n\n" +
                         "• Z Axis aman\n" +
-                        "• Spindle sudah ON\n" +
-                        "• Work Offset (G54) benar\n\n" +
+                        "• Work Offset benar\n\n" +
                         "G-code:\n$lineText\n\n" +
                         "Lanjutkan?"
             )
@@ -458,9 +481,11 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
         timerHandler.removeCallbacks(timerRunnable)
 
+        (activity as? MainActivity)?.isStreaming = false
+
         //txtEta.text = "Run Time: ✔ Done"
-        progressBar.progress = 100
-        txtProgress.text = "100 %"
+        progressBar.progress = 0
+        txtProgress.text = "0 %"
 
         feedOv = 100
         (activity as? MainActivity)?.btService?.sendRealtime(0x90.toByte())

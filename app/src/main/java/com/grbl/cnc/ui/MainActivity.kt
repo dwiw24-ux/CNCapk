@@ -18,6 +18,7 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.grbl.cnc.bluetooth.BluetoothService
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.Button
@@ -25,6 +26,7 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.annotation.RequiresPermission
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -158,7 +160,31 @@ class MainActivity : AppCompatActivity() {
             }
             showBluetoothDialog()
         }
-        findViewById<ImageView>(R.id.btnMenu).setOnClickListener{
+        findViewById<ImageView>(R.id.btnMenu).setOnClickListener{ view ->
+            val popupMenu = PopupMenu(this, view)
+            popupMenu.menuInflater.inflate(R.menu.menu_main, popupMenu.menu)
+
+            popupMenu.setOnMenuItemClickListener{ item ->
+                when (item.itemId) {
+                    R.id.settings -> {
+                        val intent = Intent(this, SettingsActivity::class.java)
+                        startActivity(intent)
+                        true
+                    }
+                    R.id.notifications -> {
+                        val intent = Intent(this, NotificationsActivity::class.java)
+                        startActivity(intent)
+                        true
+                    }
+                    R.id.about -> {
+                        val intent = Intent(this, AboutActivity::class.java)
+                        startActivity(intent)
+                        true
+                    }
+                    else -> false
+                }
+            }
+            popupMenu.show()
         }
         findViewById<ImageView>(R.id.btnUnlock).setOnClickListener {
             btService.send("\$X\n")
@@ -275,13 +301,60 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @Volatile
+    var isStreaming = false
+
     private val statusRunnable = object : Runnable {
         override fun run() {
             if (btService.isConnected ) {
-                btService.send("?")
+
+                if (!isStreaming) {
+                    btService.send("?")
+                } else {
+                    // saat streaming, polling diperlambat
+                    btService.send("?")
+                }
             }
-            handler.postDelayed(this, 150)
+            val interval = if (isStreaming) 400L else getUpdateInterval()
+            handler.postDelayed(this, interval)
         }
+    }
+
+    private fun getUpdateInterval(): Long {
+        val prefs = androidx.preference.PreferenceManager
+            .getDefaultSharedPreferences(this)
+
+        val value = prefs.getString("pref_update_interval", "150") ?: "150"
+        return value.toLong()
+    }
+
+    private val preferenceListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "pref_update_interval") {
+            handler.removeCallbacks(statusRunnable)
+            handler.post(statusRunnable)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        androidx.preference.PreferenceManager
+            .getDefaultSharedPreferences(this)
+            .registerOnSharedPreferenceChangeListener(preferenceListener)
+
+        if (btService.isConnected) {
+            handler.post(statusRunnable)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+
+        androidx.preference.PreferenceManager
+            .getDefaultSharedPreferences(this)
+            .unregisterOnSharedPreferenceChangeListener(preferenceListener)
+
+        handler.removeCallbacks(statusRunnable)
     }
 
     private fun showExitDialog() {
