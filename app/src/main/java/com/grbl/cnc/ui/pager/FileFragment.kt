@@ -1,5 +1,6 @@
 package com.grbl.cnc.ui.pager
 
+import android.annotation.SuppressLint
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -53,10 +54,10 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
     private val sendQueue = ArrayDeque<String>()
 
-
     private val timerHandler = Handler(Looper.getMainLooper())
 
     private val timerRunnable = object : Runnable {
+        @SuppressLint("SetTextI18n")
         override fun run() {
             if (!timerRunning) return
             val now = System.currentTimeMillis()
@@ -72,6 +73,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
             loadFile(uri)
         }
 
+    @SuppressLint("SetTextI18n")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 
         progressBar = view.findViewById(R.id.progressRun)
@@ -86,6 +88,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
         edtStart.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
+            @SuppressLint("NotifyDataSetChanged")
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 val line = s.toString().toIntOrNull() ?: return
                 val index = line - 1
@@ -207,9 +210,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
         (activity as? MainActivity)?.btService?.onOkReceived = {
             activity?.runOnUiThread {
-
                 if (!waitingOk) return@runOnUiThread
-                //if (runMode != RunMode.RUNNING || !waitingOk) return@runOnUiThread
 
                 waitingOk = false
                 //current++
@@ -237,6 +238,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private fun loadFile(uri: Uri) {
 
         currentFileName = getFileName(uri)
@@ -305,9 +307,11 @@ class FileFragment : Fragment(R.layout.frag_file) {
         waitingOk = true
         val cmd = sendQueue.removeFirst()
         (activity as? MainActivity)?.btService?.send(cmd + "\n")
+
         current++
     }
 
+    @SuppressLint("SetTextI18n")
     private fun runFromHere(index: Int) {
         if (index !in lines.indices) return
         val bt = (activity as? MainActivity)?.btService ?: return
@@ -321,7 +325,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
         paused = true
         runMode = RunMode.IDLE
         waitingOk = false
-        bt.sendRealtime(0x18.toByte()) // reset GRBL
+        bt.sendRealtime(0x18.toByte())
 
         Handler(Looper.getMainLooper()).postDelayed({
             sendQueue.clear()
@@ -339,9 +343,9 @@ class FileFragment : Fragment(R.layout.frag_file) {
             timerRunning = true
             timerHandler.post(timerRunnable)
 
-            adapter.activeLine = current
-            adapter.notifyItemChanged(current)
-            rv.scrollToPosition(current)
+            //adapter.activeLine = current
+            //adapter.notifyItemChanged(current)
+            //rv.scrollToPosition(current)
 
             edtStart.setText(current.toString())
 
@@ -474,6 +478,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
             .show()
     }
 
+    @SuppressLint("SetTextI18n")
     private fun stopRunFinished() {
         runMode = RunMode.IDLE
         timerRunning = false
