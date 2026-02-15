@@ -1,15 +1,18 @@
 package com.grbl.cnc.ui.pager
 
 import android.annotation.SuppressLint
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.ToggleButton
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
@@ -52,10 +55,11 @@ class FileFragment : Fragment(R.layout.frag_file) {
     enum class RunMode { IDLE, RUNNING, PAUSED }
     private var runMode = RunMode.IDLE
 
-    private val sendQueue = ArrayDeque<String>()
+    data class QueueItem(val cmd: String, val isFileLine: Boolean)
+    private val sendQueue = ArrayDeque<QueueItem>()
+    private var lastSentItem: QueueItem? = null
 
     private val timerHandler = Handler(Looper.getMainLooper())
-
     private val timerRunnable = object : Runnable {
         @SuppressLint("SetTextI18n")
         override fun run() {
@@ -95,8 +99,10 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
                 if (::adapter.isInitialized && index in lines.indices) {
                     adapter.activeLine = index
+
                     adapter.notifyDataSetChanged()
                     rv.scrollToPosition(index)
+                    //Log.d("FileFragment", "Update RV ke line $index dari sumber: onTextChanged")
                 }
             }
 
@@ -122,7 +128,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 pauseStart = System.currentTimeMillis()
             } else if (runMode == RunMode.PAUSED) {
                 bt.send("~")
-                bt.send("G90\n")
+                bt.send("G1\n")
                 pausedDuration += System.currentTimeMillis() - pauseStart
                 paused = false
                 runMode = RunMode.RUNNING
@@ -207,13 +213,57 @@ class FileFragment : Fragment(R.layout.frag_file) {
             (activity as? MainActivity)?.btService?.sendRealtime(0x99.toByte()) // Spindle reset
             txtSpinOv.text = "100%"
         }
+        view.findViewById<ToggleButton>(R.id.btnSpindle).setOnCheckedChangeListener {
+            buttonView, isChecked ->
+            if (isChecked) {
+                (activity as? MainActivity)?.btService?.send("M3 S12000\n")
+                buttonView.setTextColor(Color.GREEN)
+                buttonView.text="ON"
+            }else {
+                (activity as? MainActivity)?.btService?.send("M5\n")
+                buttonView.setTextColor(Color.RED)
+                buttonView.text="OFF"
+            }
+        }
+        view.findViewById<ToggleButton>(R.id.btnFlood).setOnCheckedChangeListener {
+                buttonView, isChecked ->
+            if (isChecked) {
+                (activity as? MainActivity)?.btService?.send("M8\n")
+                buttonView.setTextColor(Color.GREEN)
+                buttonView.text="FLOOD ON"
+            }else {
+                (activity as? MainActivity)?.btService?.send("M9\n")
+                buttonView.setTextColor(Color.RED)
+                buttonView.text="FLOOD OFF"
+            }
+        }
+        view.findViewById<ToggleButton>(R.id.btnMist).setOnCheckedChangeListener {
+                buttonView, isChecked ->
+            if (isChecked) {
+                (activity as? MainActivity)?.btService?.send("M7\n")
+                buttonView.setTextColor(Color.GREEN)
+                buttonView.text="MIST ON"
+            }else {
+                (activity as? MainActivity)?.btService?.send("M9\n")
+                buttonView.setTextColor(Color.RED)
+                buttonView.text="MIST OFF"
+            }
+        }
 
         (activity as? MainActivity)?.btService?.onOkReceived = {
             activity?.runOnUiThread {
                 if (!waitingOk) return@runOnUiThread
-
                 waitingOk = false
-                //current++
+
+                Log.d("FileFragment", "Ok diterima untuk ${lastSentItem?.cmd} ,isFileLine=${lastSentItem?.isFileLine}")
+                if (lastSentItem?.isFileLine == true) {
+                    current++
+                    adapter.activeLine = current
+                    adapter.notifyItemChanged(current)
+                    rv.scrollToPosition(current)
+                    edtStart.setText(current.toString())
+                    //Log.d("FileFragment", "Update RV ke line $current dari sumber: onOkReceived")
+                }
 
                 // ==== JIKA FILE SUDAH SELESAI ====
                 if (sendQueue.isEmpty() && current >= lines.size) {
@@ -221,26 +271,19 @@ class FileFragment : Fragment(R.layout.frag_file) {
                     return@runOnUiThread
                 }
 
-                if (runMode == RunMode.RUNNING) {
+                if (runMode == RunMode.RUNNING && !waitingOk) {
                     sendNext()
                 }
 
                 val percent = ((current.toFloat() / lines.size) * 100).toInt()
                 progressBar.progress = percent
                 txtProgress.text = "$percent %"
-
-                adapter.activeLine = current
-                adapter.notifyItemChanged(current)
-                rv.scrollToPosition(current)
-
-                edtStart.setText(current.toString())
             }
         }
     }
 
     @SuppressLint("SetTextI18n")
     private fun loadFile(uri: Uri) {
-
         currentFileName = getFileName(uri)
 
         val text = requireContext().contentResolver
@@ -264,7 +307,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
         current = 0
         paused = true
         isRunning = false
-        waitingOk = false
+        //waitingOk = false
 
         timerRunning = false
         timerHandler.removeCallbacks(timerRunnable)
@@ -281,7 +324,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
         if (lines.isEmpty()) return
 
         sendQueue.clear()
-        sendQueue.addAll(lines)
+        sendQueue.addAll(lines.map { QueueItem(it, true)})
 
         current = 0
         paused = false
@@ -302,13 +345,15 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
     private fun sendNext() {
         if (runMode != RunMode.RUNNING) return
+        if (waitingOk) return
         if (sendQueue.isEmpty()) return
 
+        val item = sendQueue.removeFirst()
+        lastSentItem = item
+        (activity as? MainActivity)?.btService?.send(item.cmd + "\n")
         waitingOk = true
-        val cmd = sendQueue.removeFirst()
-        (activity as? MainActivity)?.btService?.send(cmd + "\n")
-
-        current++
+        //Log.d("FileFragment", "Update RV ke line $item  dari sumber: sendNext")
+        Log.d("FileFragment", "sendNext kirim: ${lastSentItem?.cmd}, isFileLine=${item.isFileLine}")
     }
 
     @SuppressLint("SetTextI18n")
@@ -329,8 +374,8 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
         Handler(Looper.getMainLooper()).postDelayed({
             sendQueue.clear()
-            sendQueue.addAll(buildRunFromHereHeader(st))
-            sendQueue.addAll(lines.subList(index, lines.size))
+            sendQueue.addAll(buildRunFromHereHeader(st).map{ QueueItem(it,false)})
+            sendQueue.addAll(lines.subList(index, lines.size).map{ QueueItem(it,true)})
 
             current = index
             paused = false
@@ -343,10 +388,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
             timerRunning = true
             timerHandler.post(timerRunnable)
 
-            //adapter.activeLine = current
-            //adapter.notifyItemChanged(current)
-            //rv.scrollToPosition(current)
-
             edtStart.setText(current.toString())
 
             sendNext()
@@ -356,8 +397,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
     private fun getFileName(uri: Uri): String {
         var name = "unknown.gcode"
         val cursor = requireContext().contentResolver.query(
-            uri, null, null, null, null
-        )
+            uri, null, null, null, null)
         cursor?.use {
             if (it.moveToFirst()) {
                 val index = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
@@ -483,7 +523,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
         runMode = RunMode.IDLE
         timerRunning = false
         waitingOk = false
-
         timerHandler.removeCallbacks(timerRunnable)
 
         (activity as? MainActivity)?.isStreaming = false

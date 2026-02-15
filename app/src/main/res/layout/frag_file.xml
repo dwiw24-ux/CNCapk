@@ -299,38 +299,44 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <Button
+        <ToggleButton
+            android:id="@+id/btnSpindle"
             android:layout_width="0dp"
             android:layout_height="36dp"
             android:layout_margin="2dp"
             android:layout_weight="1"
             android:background="@drawable/bg_btn_square_selector"
-            android:text="Spindle"
-            android:textColor="@color/text_primary"
+            android:textOn="SPINDLE ON"
+            android:textOff="SPINDLE OFF"
+            android:textColor="@color/red_dark"
             android:textSize="10sp"
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />
 
-        <Button
+        <ToggleButton
+            android:id="@+id/btnFlood"
             android:layout_width="0dp"
             android:layout_height="36dp"
             android:layout_margin="2dp"
             android:layout_weight="1"
             android:background="@drawable/bg_btn_square_selector"
-            android:text="FLOOD"
-            android:textColor="@color/text_primary"
+            android:textOn="FLOOD ON"
+            android:textOff="FLOOD OFF"
+            android:textColor="@color/red_dark"
             android:textSize="10sp"
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />
 
-        <Button
+        <ToggleButton
+            android:id="@+id/btnMist"
             android:layout_width="0dp"
             android:layout_height="36dp"
             android:layout_margin="2dp"
             android:layout_weight="1"
             android:background="@drawable/bg_btn_square_selector"
-            android:text="COOL"
-            android:textColor="@color/text_primary"
+            android:textOn="MIST ON"
+            android:textOff="MIST OFF"
+            android:textColor="@color/red_dark"
             android:textSize="10sp"
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />

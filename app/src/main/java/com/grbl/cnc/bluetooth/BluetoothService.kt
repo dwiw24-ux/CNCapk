@@ -150,7 +150,7 @@ class BluetoothService(private val context: Context) {
             //val data = if (cmd.endsWith("\n")) cmd else "$cmd\n"
             //output?.write(data.toByteArray(Charsets.US_ASCII))
             output?.flush()
-            //Log.d("BT_SEND", data.replace("\n", "\\n"))
+            Log.d("BT_SEND", "send: $cmd")
         } catch (e: Exception) {
             disconnect()
         }
@@ -160,6 +160,7 @@ class BluetoothService(private val context: Context) {
     fun sendRealtime(cmd: Byte) {
         try {
             output?.write(byteArrayOf(cmd))
+            Log.d("BT_SEND", "sendRealTime: $cmd")
         } catch (e: Exception) {
             disconnect()
         }

@@ -315,7 +315,7 @@ class MainActivity : AppCompatActivity() {
                     btService.send("?")
                 }
             }
-            val interval = if (isStreaming) 400L else getUpdateInterval()
+            val interval = if (isStreaming) 100L else getUpdateInterval()
             handler.postDelayed(this, interval)
         }
     }
