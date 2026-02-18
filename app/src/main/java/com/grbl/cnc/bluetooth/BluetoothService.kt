@@ -80,25 +80,6 @@ class BluetoothService(private val context: Context) {
                 val len = input?.read(buffer) ?: -1
                 if (len <= 0) continue
 
-                //val data = String(buffer, 0, len)
-
-                // RAW → console
-                //rawListeners.forEach { it.invoke(data) }
-
-                //data.lines().forEach { line ->
-                   // val text = line.trim()
-                   // if (text.isEmpty()) return@forEach
-
-                    //if (text.equals("ok", true)) {
-                        //isBusy = false
-                      //  onOkReceived?.invoke()
-                      //  return@forEach
-                   // }
-
-                    //GrblStatusParser.parse(text)?.let {
-                      //  onStatus?.invoke(it)
-                    //}
-
                 val chunk = String(buffer, 0, len, Charsets.US_ASCII)
 
                 rawListeners.forEach { it.invoke(chunk) }
@@ -117,6 +98,7 @@ class BluetoothService(private val context: Context) {
                     when {
                         // 1️⃣ STATUS REALTIME
                         line.startsWith("<") -> {
+
                             GrblStatusParser.parse(line)?.let {
                                 onStatus?.invoke(it)
                             }

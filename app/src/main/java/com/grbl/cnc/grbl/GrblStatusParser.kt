@@ -1,5 +1,7 @@
 package com.grbl.cnc.grbl
 
+import android.util.Log
+
 object GrblStatusParser {
     private var mpos = doubleArrayOf(0.0, 0.0, 0.0)
     private var wpos = doubleArrayOf(0.0, 0.0, 0.0)
@@ -19,6 +21,9 @@ object GrblStatusParser {
             var feed = 0
             var spindle = 0
             var pin: String? = null
+
+            var plannerAvailable = 16
+            var rxAvailable = 0
 
             for (p in parts) {
                 when {
@@ -50,7 +55,13 @@ object GrblStatusParser {
                         spindle = fs[1].toInt()
                     }
                     p.startsWith("Pn:") -> {
-                        pin = p.substring(3) // contoh: "XZ"
+                        pin = p.substring(3)
+                    }
+                    p.startsWith("Bf:") -> {
+                        val bf = p.substring(3).split(",")
+
+                        plannerAvailable = bf.getOrNull(0)?.toIntOrNull() ?: plannerAvailable
+                        rxAvailable = bf.getOrNull(1)?.toIntOrNull() ?:  rxAvailable
                     }
                 }
             }
@@ -71,7 +82,9 @@ object GrblStatusParser {
                 state,
                 mpos[0], mpos[1], mpos[2],
                 wpos[0], wpos[1], wpos[2],
-                feed, spindle, pin
+                feed, spindle, pin,
+                plannerAvailable,
+                rxAvailable
             )
 
         } catch (e: Exception) {

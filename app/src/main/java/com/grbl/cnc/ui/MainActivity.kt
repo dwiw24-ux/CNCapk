@@ -20,7 +20,9 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Build
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
@@ -32,15 +34,18 @@ import androidx.core.content.ContextCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.grbl.cnc.grbl.GrblStatus
 import com.grbl.cnc.ui.pager.ConsoleFragment
+import com.grbl.cnc.ui.pager.FileFragment
 import java.util.Locale
+import androidx.activity.viewModels
+import com.grbl.cnc.ui.pager.MainViewModel
 
 
 class MainActivity : AppCompatActivity() {
 
     @Volatile
     var isJogging = false
-
     var pendingGrblConnect = false
+
     private lateinit var txtStatus: TextView
     private lateinit var txtWcs: TextView
     private lateinit var txtStatusGrbl: TextView
@@ -55,7 +60,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var txtLimX: TextView
     private lateinit var txtLimY: TextView
     private lateinit var txtLimZ: TextView
+
+    private val viewModel: MainViewModel by viewModels()
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+
     lateinit var btService: BluetoothService
     lateinit var consoleFragment: ConsoleFragment
 
@@ -98,7 +106,6 @@ class MainActivity : AppCompatActivity() {
         txtLimY = findViewById(R.id.txtLimY)
         txtLimZ = findViewById(R.id.txtLimZ)
 
-
         txtwposX.setOnClickListener { showWPosDialog('X') }
         txtwposY.setOnClickListener { showWPosDialog('Y') }
         txtwposZ.setOnClickListener { showWPosDialog('Z') }
@@ -126,6 +133,7 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 txtStatus.text = "BT Connected"
                 pendingGrblConnect = true
+                Toast.makeText(this, "Bluetooth Connected", Toast.LENGTH_SHORT).show()
             }
             handler.post(statusRunnable)
         }
@@ -138,8 +146,10 @@ class MainActivity : AppCompatActivity() {
         }
 
         btService.onStatus = { status ->
+
             runOnUiThread {
                 updateStatusUI(status)
+                viewModel.updateStatus(status)
             }
         }
 
@@ -158,8 +168,21 @@ class MainActivity : AppCompatActivity() {
                 requestBluetoothPermission()
                 return@setOnClickListener
             }
-            showBluetoothDialog()
+
+            if (btService.isConnected) {
+                MaterialAlertDialogBuilder(this)
+                    .setTitle("Disconnect Bluetooth")
+                    .setMessage("Putuskan koneksi dari ${btService.connectedDeviceName}?")
+                    .setPositiveButton("Disconnect") { _, _ ->
+                        btService.disconnect()
+                    }
+                    .setNegativeButton("Batal", null)
+                    .show()
+            } else {
+                showBluetoothDialog()
+            }
         }
+
         findViewById<ImageView>(R.id.btnMenu).setOnClickListener{ view ->
             val popupMenu = PopupMenu(this, view)
             popupMenu.menuInflater.inflate(R.menu.menu_main, popupMenu.menu)
@@ -190,9 +213,16 @@ class MainActivity : AppCompatActivity() {
             btService.send("\$X\n")
         }
         findViewById<ImageView>(R.id.btnPower).setOnClickListener {
-            if (btService.isConnected){
-                btService.sendRealtime(0x18.toByte())
-            }
+            MaterialAlertDialogBuilder(this)
+                .setTitle("GRBL Soft Reset")
+                .setMessage("Lanjutkan ?")
+                .setPositiveButton("Ok") { _, _ ->
+                    if (btService.isConnected){
+                        btService.sendRealtime(0x18.toByte())
+                    }
+                }
+                    .setNegativeButton("Batal", null)
+                    .show()
         }
 
     }
@@ -259,12 +289,12 @@ class MainActivity : AppCompatActivity() {
         txtStatusGrbl.text = "${s.state}"
         txtStatusGrbl.setTextColor(
             when (s.state) {
-                "Idle" -> 0xFF00E676.toInt()
-                "Run" -> 0xFFFFC107.toInt()
-                "Home" -> 0xFFFFC107.toInt()
-                "Probe" -> 0xFFFFC107.toInt()
-                "Alarm" -> 0xFFFF1744.toInt()
-                "Hold:0" -> 0xFFFF1744.toInt()
+                "Idle" -> Color.GREEN
+                "Run" -> Color.YELLOW
+                "Jog" -> Color.YELLOW
+                "Home" -> Color.YELLOW
+                "Alarm" -> Color.RED
+                "Hold:0" -> Color.RED
                 else -> 0xFFFFFFFF.toInt()
             }
         )
@@ -282,10 +312,10 @@ class MainActivity : AppCompatActivity() {
 
         // === LIMIT SWITCH ===
         updateLimitUI(s.pin)
+
     }
 
     private fun updateLimitUI(pin: String?) {
-
         val active = pin ?: ""
 
         setLimitColor(txtLimX, active.contains("X"))
@@ -295,9 +325,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun setLimitColor(view: TextView, triggered: Boolean) {
         if (triggered) {
-            view.setTextColor(0xFFFF1744.toInt())      // merah terang
+            view.setTextColor(Color.RED)
         } else {
-            view.setTextColor(0xFF00E676.toInt())      // hijau
+            view.setTextColor(Color.GREEN)
         }
     }
 
@@ -324,7 +354,7 @@ class MainActivity : AppCompatActivity() {
         val prefs = androidx.preference.PreferenceManager
             .getDefaultSharedPreferences(this)
 
-        val value = prefs.getString("pref_update_interval", "150") ?: "150"
+        val value = prefs.getString("pref_update_interval", "100") ?: "100"
         return value.toLong()
     }
 
@@ -362,7 +392,6 @@ class MainActivity : AppCompatActivity() {
             .setTitle("Keluar Aplikasi")
             .setMessage("Yakin ingin keluar ?")
             .setPositiveButton("Keluar") { _, _ ->
-                btService.sendRealtime(0X18.toByte())
                 finishAffinity()
             }
             .setNegativeButton("Batal", null)

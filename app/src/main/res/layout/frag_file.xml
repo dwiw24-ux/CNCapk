@@ -308,7 +308,6 @@
             android:background="@drawable/bg_btn_square_selector"
             android:textOn="SPINDLE ON"
             android:textOff="SPINDLE OFF"
-            android:textColor="@color/red_dark"
             android:textSize="10sp"
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />

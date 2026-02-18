@@ -18,7 +18,8 @@ class MainPagerAdapter(activity: AppCompatActivity)
             1 -> ProbeFragment()
             2 -> FileFragment()
             3 -> EditorFragment()
-            else -> ConsoleFragment()
+            4 -> ConsoleFragment()
+            else -> JogFragment()
         }
     }
 }

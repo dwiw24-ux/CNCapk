@@ -10,5 +10,7 @@ data class GrblStatus(
     val wposZ: Double,
     val feed: Int,
     val spindle: Int,
-    val pin: String?
+    val pin: String?,
+    val plannerAvailable: Int,
+    val rxAvailable: Int
 )

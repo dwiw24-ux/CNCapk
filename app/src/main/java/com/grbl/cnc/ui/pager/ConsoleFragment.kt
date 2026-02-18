@@ -91,14 +91,22 @@ class ConsoleFragment : Fragment(R.layout.frag_console) {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        (activity as? MainActivity)
+            ?.btService
+            ?.removeRawListener(consoleListener)
+    }
+
     private fun showStartupHeader() {
         if (isStartupDone) return
         isStartupDone = true
 
+        (activity as? MainActivity)?.btService?.send("$\n")
         (activity as? MainActivity)?.btService?.send("\$I\n")
-        (activity as? MainActivity)?.btService?.send("\$G\n")
-        (activity as? MainActivity)?.btService?.send("$#\n")
         (activity as? MainActivity)?.btService?.send("$$\n")
+        (activity as? MainActivity)?.btService?.send("$#\n")
+        (activity as? MainActivity)?.btService?.send("\$G\n")
     }
 
     private fun appendSystem(text: String) {
@@ -155,13 +163,6 @@ class ConsoleFragment : Fragment(R.layout.frag_console) {
                 }
             }
         }
-    }
-
-    override fun onStop() {
-        super.onStop()
-        (activity as? MainActivity)
-            ?.btService
-            ?.removeRawListener(consoleListener)
     }
 
     fun append(raw: String) {
