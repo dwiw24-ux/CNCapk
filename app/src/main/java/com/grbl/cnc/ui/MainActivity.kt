@@ -66,11 +66,14 @@ class MainActivity : AppCompatActivity() {
 
     lateinit var btService: BluetoothService
     lateinit var consoleFragment: ConsoleFragment
+    private var keepAliveRunning = false
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        notificationPermission()
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
@@ -136,6 +139,7 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "Bluetooth Connected", Toast.LENGTH_SHORT).show()
             }
             handler.post(statusRunnable)
+            startKeepAliveService()
         }
 
         btService.onDisconnected = {
@@ -143,6 +147,7 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 txtStatus.text = "BT Disconnected"
             }
+            stopKeepAliveService()
         }
 
         btService.onStatus = { status ->
@@ -393,6 +398,7 @@ class MainActivity : AppCompatActivity() {
             .setMessage("Yakin ingin keluar ?")
             .setPositiveButton("Keluar") { _, _ ->
                 finishAffinity()
+                btService.disconnect()
             }
             .setNegativeButton("Batal", null)
             .show()
@@ -446,5 +452,36 @@ class MainActivity : AppCompatActivity() {
             dialog.dismiss()
         }
         dialog.show()
+    }
+
+    private fun startKeepAliveService() {
+        if (keepAliveRunning) return
+        keepAliveRunning = true
+
+        val intent = Intent(this, StreamKeepAliveService::class.java)
+        ContextCompat.startForegroundService(this, intent)
+    }
+
+    private fun stopKeepAliveService() {
+        if (!keepAliveRunning) return
+        keepAliveRunning = false
+
+        val intent = Intent(this, StreamKeepAliveService::class.java).apply {
+            action = StreamKeepAliveService.ACTION_STOP
+        }
+        startService(intent)
+    }
+
+    private fun notificationPermission() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+
+                requestPermissions(
+                    arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                    100
+                )
+            }
+        }
     }
 }

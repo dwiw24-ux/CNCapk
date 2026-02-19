@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -155,7 +156,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
                             "• Work Offset Benar\n\n" +
                             "• Lanjutkan ?")
                 .setPositiveButton("Ok") { _, _ ->
-                    startKeepAliveNotif()
                     startRun()
                 }
                 .setNegativeButton("Batal", null)
@@ -198,8 +198,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
             spinOv = 100
             (activity as? MainActivity)?.btService?.sendRealtime(0x99.toByte())
             txtSpinOv.text = "100%"
-
-            stopKeepAliveNotif()
         }
         view.findViewById<Button>(R.id.btnRunFromHere).setOnClickListener {
             if (currentState != GrblState.IDLE) {
@@ -315,7 +313,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
                 if (sendQueue.isEmpty() && current >= lines.size) {
                     stopRunFinished()
-                    stopKeepAliveNotif()
                     return@runOnUiThread
                 }
 
@@ -552,7 +549,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
                         "Lanjutkan?"
             )
             .setPositiveButton("RUN") { _, _ ->
-                startKeepAliveNotif()
                 runFromHere(index)
             }
             .setNegativeButton("BATAL", null)
@@ -597,26 +593,14 @@ class FileFragment : Fragment(R.layout.frag_file) {
         val percent = (((activeLine + 1).toFloat() / lines.size) * 100).toInt()
         progressBar.progress = percent
         txtProgress.text = "$percent %"
-        updateNotif(percent)
+        updateServiceProgress(percent)
     }
 
-    private fun startKeepAliveNotif() {
-        val intent = Intent(requireContext(), StreamKeepAliveService::class.java)
-        intent.action = "START"
-        requireContext().startForegroundService(intent)
-    }
-
-    private fun stopKeepAliveNotif() {
-        val intent = Intent(requireContext(), StreamKeepAliveService::class.java)
-        intent.action = "STOP"
+    private fun updateServiceProgress(progress: Int) {
+        val intent = Intent(requireContext(), StreamKeepAliveService::class.java).apply {
+            action = StreamKeepAliveService.ACTION_UPDATE_PROGRESS
+            putExtra(StreamKeepAliveService.EXTRA_PROGRESS, progress)
+        }
         requireContext().startService(intent)
-    }
-
-    private fun updateNotif(progress: Int) {
-        val intent = Intent(requireContext(), StreamKeepAliveService::class.java)
-        intent.action = "UPDATE"
-        intent.putExtra("progress", progress)
-        requireContext().startService(intent)
-
     }
 }
