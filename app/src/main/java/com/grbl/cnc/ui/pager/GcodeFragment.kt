@@ -10,7 +10,7 @@ import androidx.fragment.app.Fragment
 import com.grbl.cnc.R
 import com.grbl.cnc.gcode.PocketGcodeCreator
 
-class EditorFragment : Fragment(R.layout.frag_editor) {
+class GcodeFragment : Fragment(R.layout.frag_gcode) {
 
     private var gcodeToSave: String = ""
 

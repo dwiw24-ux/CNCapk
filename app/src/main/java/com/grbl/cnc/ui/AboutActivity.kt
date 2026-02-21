@@ -4,9 +4,11 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.addCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
 
 class AboutActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate( savedInstanceState)
 
         supportFragmentManager.beginTransaction()
@@ -14,7 +16,6 @@ class AboutActivity : AppCompatActivity() {
             .commit()
 
         onBackPressedDispatcher.addCallback(this) {
-            startActivity(Intent(this@AboutActivity, MainActivity::class.java))
             finish()
         }
     }

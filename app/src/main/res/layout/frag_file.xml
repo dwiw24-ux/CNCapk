@@ -29,14 +29,15 @@
 
         <Button
             android:id="@+id/btnOpen"
-            android:layout_width="120dp"
+            android:layout_width="130dp"
             android:layout_height="36dp"
+            android:padding="0dp"
             android:layout_marginHorizontal="2dp"
             android:background="@drawable/bg_btn_square_selector"
             android:text="FILE"
             android:layout_gravity="end"
             android:textColor="@color/text_primary"
-            android:textSize="10sp"
+            android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />
     </LinearLayout>
@@ -102,12 +103,13 @@
 
         <Button
             android:id="@+id/btnRunFromHere"
-            android:layout_width="wrap_content"
+            android:layout_width="130dp"
             android:layout_height="36dp"
+            android:padding="0dp"
             android:background="@drawable/bg_btn_square_selector"
             android:text="RUN FROM HERE"
             android:textColor="@color/text_primary"
-            android:textSize="10sp"
+            android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />
     </LinearLayout>
@@ -124,10 +126,11 @@
             android:layout_height="36dp"
             android:layout_marginHorizontal="2dp"
             android:layout_weight="1"
+            android:padding="0dp"
             android:background="@drawable/bg_btn_square_selector"
             android:text="RUN"
             android:textColor="@color/text_primary"
-            android:textSize="10sp"
+            android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />
 
@@ -137,10 +140,11 @@
             android:layout_height="36dp"
             android:layout_marginHorizontal="2dp"
             android:layout_weight="1"
+            android:padding="0dp"
             android:background="@drawable/bg_btn_square_selector"
             android:text="HOLD"
             android:textColor="@color/text_primary"
-            android:textSize="10sp"
+            android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />
 
@@ -150,10 +154,11 @@
             android:layout_height="36dp"
             android:layout_marginHorizontal="2dp"
             android:layout_weight="1"
+            android:padding="0dp"
             android:background="@drawable/bg_btn_square_selector"
             android:text="STOP"
             android:textColor="@color/text_primary"
-            android:textSize="10sp"
+            android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />
     </LinearLayout>
@@ -212,11 +217,12 @@
             android:layout_height="36dp"
             android:layout_margin="2dp"
             android:layout_weight="1"
+            android:padding="0dp"
             android:background="@drawable/bg_btn_square_selector"
             android:text="F-10%"
             android:textAlignment="center"
             android:textColor="@color/text_primary"
-            android:textSize="10sp"
+            android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />
 
@@ -226,10 +232,11 @@
             android:layout_height="36dp"
             android:layout_margin="2dp"
             android:layout_weight="1"
+            android:padding="0dp"
             android:background="@drawable/bg_btn_square_selector"
             android:text="F100%"
             android:textColor="@color/text_primary"
-            android:textSize="10sp"
+            android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />
 
@@ -239,10 +246,11 @@
             android:layout_height="36dp"
             android:layout_margin="2dp"
             android:layout_weight="1"
+            android:padding="0dp"
             android:background="@drawable/bg_btn_square_selector"
             android:text="F+10%"
             android:textColor="@color/text_primary"
-            android:textSize="10sp"
+            android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />
     </LinearLayout>
@@ -260,10 +268,11 @@
             android:layout_height="36dp"
             android:layout_margin="2dp"
             android:layout_weight="1"
+            android:padding="0dp"
             android:background="@drawable/bg_btn_square_selector"
             android:text="S-10%"
             android:textColor="@color/text_primary"
-            android:textSize="10sp"
+            android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />
 
@@ -273,10 +282,11 @@
             android:layout_height="36dp"
             android:layout_margin="2dp"
             android:layout_weight="1"
+            android:padding="0dp"
             android:background="@drawable/bg_btn_square_selector"
             android:text="S100%"
             android:textColor="@color/text_primary"
-            android:textSize="10sp"
+            android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />
 
@@ -286,10 +296,11 @@
             android:layout_height="36dp"
             android:layout_margin="2dp"
             android:layout_weight="1"
+            android:padding="0dp"
             android:background="@drawable/bg_btn_square_selector"
             android:text="S+10%"
             android:textColor="@color/text_primary"
-            android:textSize="10sp"
+            android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />
     </LinearLayout>
@@ -305,10 +316,11 @@
             android:layout_height="36dp"
             android:layout_margin="2dp"
             android:layout_weight="1"
+            android:padding="0dp"
             android:background="@drawable/bg_btn_square_selector"
             android:textOn="SPINDLE ON"
             android:textOff="SPINDLE OFF"
-            android:textSize="10sp"
+            android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />
 
@@ -318,11 +330,12 @@
             android:layout_height="36dp"
             android:layout_margin="2dp"
             android:layout_weight="1"
+            android:padding="0dp"
             android:background="@drawable/bg_btn_square_selector"
             android:textOn="FLOOD ON"
             android:textOff="FLOOD OFF"
             android:textColor="@color/red_dark"
-            android:textSize="10sp"
+            android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />
 
@@ -332,11 +345,12 @@
             android:layout_height="36dp"
             android:layout_margin="2dp"
             android:layout_weight="1"
+            android:padding="0dp"
             android:background="@drawable/bg_btn_square_selector"
             android:textOn="MIST ON"
             android:textOff="MIST OFF"
             android:textColor="@color/red_dark"
-            android:textSize="10sp"
+            android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />
     </LinearLayout>

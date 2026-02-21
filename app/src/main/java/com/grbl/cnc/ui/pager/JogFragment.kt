@@ -1,7 +1,11 @@
 package com.grbl.cnc.ui.pager
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import android.view.View
 import android.widget.ImageButton
 import android.widget.SeekBar
@@ -11,6 +15,9 @@ import com.grbl.cnc.ui.MainActivity
 import android.view.MotionEvent
 import android.widget.Button
 import android.widget.TextView
+import androidx.fragment.app.activityViewModels
+import com.grbl.cnc.grbl.GrblState
+import kotlin.getValue
 
 class JogFragment : Fragment(R.layout.frag_jog) {
 
@@ -18,10 +25,22 @@ class JogFragment : Fragment(R.layout.frag_jog) {
     private var downTime = 0L
     private val tapThreshold = 200L   // ms
     private val continuousInterval = 120L
-    private var jogHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var jogHandler = Handler(Looper.getMainLooper())
     private var jogRunnable: Runnable? = null
     private var step = 5.0
     private var feed = 1000
+    private var probeStep = 0
+    private var isProbing = false
+
+    private var probeDist = 0f
+    private var probePlate = 0f
+    private var probeRetract = 0f
+    private var probeFeedFast = 0
+    private var probeFeedSlow = 0
+
+    private val handler = Handler(Looper.getMainLooper())
+    private val viewModel: MainViewModel by activityViewModels()
+    private var currentState: GrblState = GrblState.UNKNOWN
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -31,6 +50,25 @@ class JogFragment : Fragment(R.layout.frag_jog) {
 
         val seekStep = view.findViewById<SeekBar>(R.id.seekStep)
         val seekFeed = view.findViewById<SeekBar>(R.id.seekFeed)
+
+        viewModel.grblRunMode.observe(viewLifecycleOwner) { state ->
+            currentState = state
+
+            if (!isProbing) return@observe
+
+            if (currentState == GrblState.ALARM) {
+
+                isProbing = false
+                probeStep = 0
+
+                handler.removeCallbacksAndMessages(null)
+
+                return@observe
+            }
+            if (currentState == GrblState.IDLE) {
+                handleProbeStep()
+            }
+        }
 
         seekStep.progress = 50 // default
 
@@ -111,27 +149,25 @@ class JogFragment : Fragment(R.layout.frag_jog) {
             (activity as? MainActivity)?.btService?.send("\$G\n")
         }
         view.findViewById<Button>(R.id.btnProbe).setOnClickListener {
+
+            val prefs = requireContext().getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
+
+            probeFeedFast = prefs.getInt("probe_feed", 100)
+            probeFeedSlow = probeFeedFast / 2
+            probeDist = prefs.getFloat("probe_dist", 50f)
+            probePlate = prefs.getFloat("probe_plate", 1.5f)
+            probeRetract = prefs.getFloat("probe_retract", 5f)
+
             val bt = (activity as? MainActivity)?.btService ?: return@setOnClickListener
 
-            Thread {
-                bt.send("G91\n")
-                Thread.sleep(2000)
+            if (!bt.isConnected) return@setOnClickListener
+            if (isProbing) return@setOnClickListener
 
-                bt.send("G38.2 Z-50.000 F100\n")
-                bt.send("G10 L20 P0 Z1.500\n")
-                Thread.sleep(3000)
+            isProbing = true
+            probeStep = 1
 
-                bt.send("G0 Z5.000\n")
-                Thread.sleep(2000)
-
-                bt.send("G38.2 Z-10.000 F50\n")
-                bt.send("G10 L20 P0 Z1.500\n")
-                Thread.sleep(4000)
-
-                bt.send("G0 Z5.000\n")
-                bt.send("G90\n")
-            }
-                .start()
+            bt.send("G91\n")
+            bt.send("G38.2 Z-$probeDist F$probeFeedFast\n")
         }
     }
 
@@ -191,6 +227,41 @@ class JogFragment : Fragment(R.layout.frag_jog) {
                 }
             }
             true
+        }
+    }
+
+    private fun handleProbeStep() {
+
+        val bt = (activity as? MainActivity)?.btService ?: return
+
+        when (probeStep) {
+
+            // FAST PROBE SELESAI
+            1 -> {
+                handler.postDelayed({
+                    bt.send("G0 Z$probeRetract\n")
+                    probeStep = 2
+                }, 400)
+            }
+
+            // RETRACT SELESAI → MULAI SLOW PROBE
+            2 -> {
+                bt.send("G38.2 Z-$probeDist F$probeFeedSlow\n")
+                probeStep = 3
+            }
+
+            // SLOW PROBE SELESAI
+            3 -> {
+                handler.postDelayed({
+                    bt.send("G10 L20 P0 Z$probePlate\n")
+                    bt.send("G0 Z5.000\n")
+                    bt.send("G90\n")
+
+                    isProbing = false
+                    probeStep = 0
+
+                }, 300)
+            }
         }
     }
 }

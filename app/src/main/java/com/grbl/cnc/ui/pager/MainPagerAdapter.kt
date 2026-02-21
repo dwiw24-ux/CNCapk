@@ -10,15 +10,14 @@ class MainPagerAdapter(activity: AppCompatActivity)
 
     val consoleFragment = ConsoleFragment()
 
-    override fun getItemCount(): Int = 5
+    override fun getItemCount(): Int = 4
 
     override fun createFragment(position: Int): Fragment {
         return when (position) {
             0 -> JogFragment()
-            1 -> ProbeFragment()
-            2 -> FileFragment()
-            3 -> EditorFragment()
-            4 -> ConsoleFragment()
+            1 -> FileFragment()
+            2 -> GcodeFragment()
+            3 -> ConsoleFragment()
             else -> JogFragment()
         }
     }

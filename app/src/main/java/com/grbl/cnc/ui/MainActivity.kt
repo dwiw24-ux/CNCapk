@@ -18,11 +18,12 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.grbl.cnc.bluetooth.BluetoothService
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
-import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
@@ -34,11 +35,11 @@ import androidx.core.content.ContextCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.grbl.cnc.grbl.GrblStatus
 import com.grbl.cnc.ui.pager.ConsoleFragment
-import com.grbl.cnc.ui.pager.FileFragment
 import java.util.Locale
 import androidx.activity.viewModels
+import com.grbl.cnc.ui.SettingActivity
 import com.grbl.cnc.ui.pager.MainViewModel
-
+import android.util.Log
 
 class MainActivity : AppCompatActivity() {
 
@@ -74,7 +75,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         notificationPermission()
-
+        checkBatteryOptimization()
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         val root = findViewById<View>(R.id.rootLayout)
@@ -123,10 +124,10 @@ class MainActivity : AppCompatActivity() {
         TabLayoutMediator(tabLayout, viewPager) { tab, pos ->
             tab.text = when (pos) {
                 0 -> "JOG"
-                1 -> "PROBE"
-                2 -> "FILE"
-                3 -> "EDITOR"
-                else -> "CONSOLE"
+                1 -> "FILE"
+                2 -> "G-CODE"
+                3 -> "CONSOLE"
+                else -> "JOG"
             }
         }.attach()
 
@@ -195,7 +196,7 @@ class MainActivity : AppCompatActivity() {
             popupMenu.setOnMenuItemClickListener{ item ->
                 when (item.itemId) {
                     R.id.settings -> {
-                        val intent = Intent(this, SettingsActivity::class.java)
+                        val intent = Intent(this, SettingActivity::class.java)
                         startActivity(intent)
                         true
                     }
@@ -341,40 +342,36 @@ class MainActivity : AppCompatActivity() {
 
     private val statusRunnable = object : Runnable {
         override fun run() {
-            if (btService.isConnected ) {
 
-                if (!isStreaming) {
-                    btService.send("?")
-                } else {
-                    // saat streaming, polling diperlambat
-                    btService.send("?")
-                }
+            if (btService.isConnected) {
+                btService.send("?")
             }
-            val interval = if (isStreaming) 100L else getUpdateInterval()
+
+            val interval = if (isStreaming) {
+                150L
+            } else {
+                getUpdateInterval()
+            }
             handler.postDelayed(this, interval)
         }
     }
 
     private fun getUpdateInterval(): Long {
-        val prefs = androidx.preference.PreferenceManager
-            .getDefaultSharedPreferences(this)
-
-        val value = prefs.getString("pref_update_interval", "100") ?: "100"
-        return value.toLong()
+        val prefs = getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
+        return prefs.getInt("polling_interval", 100).toLong()
     }
 
-    private val preferenceListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == "pref_update_interval") {
-            handler.removeCallbacks(statusRunnable)
-            handler.post(statusRunnable)
+    private val preferenceListener =
+        SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "polling_interval") {
+                handler.removeCallbacks(statusRunnable)
+                handler.post(statusRunnable)
+            }
         }
-    }
 
     override fun onResume() {
         super.onResume()
-
-        androidx.preference.PreferenceManager
-            .getDefaultSharedPreferences(this)
+        getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
             .registerOnSharedPreferenceChangeListener(preferenceListener)
 
         if (btService.isConnected) {
@@ -384,9 +381,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-
-        androidx.preference.PreferenceManager
-            .getDefaultSharedPreferences(this)
+        getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
             .unregisterOnSharedPreferenceChangeListener(preferenceListener)
 
         handler.removeCallbacks(statusRunnable)
@@ -482,6 +477,20 @@ class MainActivity : AppCompatActivity() {
                     100
                 )
             }
+        }
+    }
+
+    private fun checkBatteryOptimization() {
+        if (!BatteryOptimizationHelper.isIgnoringBatteryOptimizations(this)) {
+            AlertDialog.Builder(this)
+                .setTitle("Izinkan Background Running")
+                .setMessage("Agar koneksi Bluetooth GRBL tetap stabil saat layar mati," +
+                "izinkan aplikasi berjalan tanpa pembatasan baterai.")
+                .setPositiveButton("Izinkan") { _, _ ->
+                    BatteryOptimizationHelper.requestDisableBatteryOptimization(this)
+                }
+                .setNegativeButton("Nanti", null)
+                .show()
         }
     }
 }
