@@ -300,7 +300,7 @@ class MainActivity : AppCompatActivity() {
                 "Jog" -> Color.YELLOW
                 "Home" -> Color.YELLOW
                 "Alarm" -> Color.RED
-                "Hold:0" -> Color.RED
+                "Hold" -> Color.RED
                 else -> 0xFFFFFFFF.toInt()
             }
         )

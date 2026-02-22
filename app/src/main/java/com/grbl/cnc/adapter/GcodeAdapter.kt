@@ -37,7 +37,7 @@ class GcodeAdapter(
         holder.tv.text = "${position + 1}. ${lines[position]}"
 
         if (position == activeLine) {
-            holder.tv.setBackgroundColor(Color.parseColor("#5115C0"))
+            holder.tv.setBackgroundColor(Color.parseColor("#2A2A2A"))
             holder.tv.setTextColor(Color.WHITE)
         } else {
             holder.tv.setBackgroundColor(Color.TRANSPARENT)

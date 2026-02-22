@@ -33,6 +33,12 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
             ),
             SettingItem(
                 R.drawable.ic_settings_applications_black_24dp,
+                "Spindle Start Delay",
+                "Delay: ${prefs.getInt("spindle_delay", 2)} sec",
+                "spindle"
+            ),
+            SettingItem(
+                R.drawable.ic_settings_applications_black_24dp,
                 "Status Polling Interval",
                 "Interval: ${prefs.getInt("polling_interval", 100)} ms",
                 "polling"
@@ -52,6 +58,9 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
                         .replace(R.id.settingContainer, SettingJogFragment())
                         .addToBackStack(null)
                         .commit()
+                }
+                "spindle" -> {
+                    spindleDelayDialog()
                 }
                 "polling" -> {
                     showPollingDialog()
@@ -94,5 +103,35 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+    private fun spindleDelayDialog() {
+
+        val prefs = requireContext()
+            .getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
+
+        val options = arrayOf("0 sec", "1 sec", "2 sec", "3 sec", "4 sec", "5 sec")
+        val values = arrayOf(0, 1, 2, 3, 4, 5)
+
+        val current = prefs.getInt("spindle_delay", 2)
+        val selectedIndex = values.indexOf(current).coerceAtLeast(0)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Select Spindle Start Delay")
+            .setSingleChoiceItems(options, selectedIndex) { dialog, which ->
+
+                prefs.edit()
+                    .putInt("spindle_delay", values[which])
+                    .apply()
+
+                dialog.dismiss()
+
+                // Refresh fragment supaya deskripsi update
+                parentFragmentManager.beginTransaction()
+                    .replace(R.id.settingContainer, SettingMenuFragment())
+                    .commit()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+
     }
 }

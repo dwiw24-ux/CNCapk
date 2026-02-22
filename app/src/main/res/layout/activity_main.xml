@@ -24,7 +24,7 @@
        android:id="@+id/tabLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#5115C0"
+        android:background="@color/button_gray"
         app:tabIndicatorFullWidth="true"
         app:tabTextColor="@color/white"
         app:tabIndicatorColor="@color/white"
