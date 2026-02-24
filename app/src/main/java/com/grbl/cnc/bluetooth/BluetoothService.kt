@@ -129,10 +129,8 @@ class BluetoothService(private val context: Context) {
     fun send(cmd: String) {
         try {
             output?.write(cmd.toByteArray(Charsets.US_ASCII))
-            //val data = if (cmd.endsWith("\n")) cmd else "$cmd\n"
-            //output?.write(data.toByteArray(Charsets.US_ASCII))
             output?.flush()
-            Log.d("BT_SEND", "send: $cmd")
+            //Log.d("BT_SEND", "send: $cmd")
         } catch (e: Exception) {
             disconnect()
         }
@@ -142,7 +140,17 @@ class BluetoothService(private val context: Context) {
     fun sendRealtime(cmd: Byte) {
         try {
             output?.write(byteArrayOf(cmd))
-            Log.d("BT_SEND", "sendRealTime: $cmd")
+            //Log.d("BT_SEND", "sendRealTime: $cmd")
+        } catch (e: Exception) {
+            disconnect()
+        }
+    }
+
+    fun spindleRealtime(cmd: String) {
+        try {
+            output?.write(cmd.toByteArray(Charsets.US_ASCII))
+            output?.flush()
+            //Log.d("BT_SEND", "send: $cmd")
         } catch (e: Exception) {
             disconnect()
         }

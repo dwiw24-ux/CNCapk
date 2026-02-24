@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.grbl.cnc.grbl.GrblState
 import com.grbl.cnc.grbl.GrblStatus
+import com.grbl.cnc.grbl.SpindleDirection
 
 class MainViewModel : ViewModel() {
 
@@ -20,10 +21,32 @@ class MainViewModel : ViewModel() {
     private val _plannerAvailable = MutableLiveData<Int>()
     val plannerAvailable: LiveData<Int> = _plannerAvailable
 
+    // ✅ Spindle RPM
+    private val _spindleRpm = MutableLiveData<Int>()
+    val spindleRpm: LiveData<Int> = _spindleRpm
+
+    // ✅ Coolant state
+    private val _floodOn = MutableLiveData<Boolean>()
+    val floodOn: LiveData<Boolean> = _floodOn
+
+    private val _mistOn = MutableLiveData<Boolean>()
+    val mistOn: LiveData<Boolean> = _mistOn
+
+    private val _spindleDirection = MutableLiveData<SpindleDirection>()
+    val spindleDirection: LiveData<SpindleDirection> = _spindleDirection
+
     fun updateStatus(status: GrblStatus) {
         _grblStatus.value = status
         _plannerAvailable.value = status.plannerAvailable
         _grblRunMode.value = mapState(status.state)
+
+        // ✅ Ambil spindle dari status
+        _spindleRpm.value = status.spindle
+
+        // ✅ Coolant
+        _floodOn.value = status.flood
+        _mistOn.value = status.mist
+        _spindleDirection.value = status.spindleDirection
     }
 
     private fun mapState(state: String): GrblState {

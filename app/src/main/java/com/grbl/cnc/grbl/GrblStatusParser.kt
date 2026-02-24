@@ -18,12 +18,17 @@ object GrblStatusParser {
 
             var hasMPos = false
             var hasWPos = false
+
             var feed = 0
             var spindle = 0
             var pin: String? = null
 
             var plannerAvailable = 16
             var rxAvailable = 0
+
+            var flood = false
+            var mist = false
+            var spindleDirection = SpindleDirection.OFF
 
             for (p in parts) {
                 when {
@@ -63,6 +68,17 @@ object GrblStatusParser {
                         plannerAvailable = bf.getOrNull(0)?.toIntOrNull() ?: plannerAvailable
                         rxAvailable = bf.getOrNull(1)?.toIntOrNull() ?:  rxAvailable
                     }
+                    p.startsWith("A:") -> {
+                        val acc = p.substring(2)
+
+                        flood = acc.contains("F")
+                        mist = acc.contains("M")
+                        spindleDirection = when {
+                            acc.contains("S") -> SpindleDirection.CW
+                            acc.contains("C") -> SpindleDirection.CCW
+                            else -> SpindleDirection.OFF
+                        }
+                    }
                 }
             }
 
@@ -84,7 +100,10 @@ object GrblStatusParser {
                 wpos[0], wpos[1], wpos[2],
                 feed, spindle, pin,
                 plannerAvailable,
-                rxAvailable
+                rxAvailable,
+                flood,
+                mist,
+                spindleDirection
             )
 
         } catch (e: Exception) {

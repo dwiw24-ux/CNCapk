@@ -87,18 +87,20 @@
     <LinearLayout
         android:orientation="horizontal"
         android:layout_width="match_parent"
-        android:layout_height="40dp"
+        android:layout_height="42dp"
         android:layout_marginVertical="4dp">
 
         <EditText
             android:id="@+id/edtStartLine"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="36dp"
             android:layout_weight="1"
+            android:padding="0dp"
+            android:layout_gravity="bottom"
             android:hint="Start line"
             android:inputType="number"
             android:textColor="#00E676"
-            android:textSize="14sp"
+            android:textSize="18sp"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />
 
         <Button
@@ -106,6 +108,7 @@
             android:layout_width="130dp"
             android:layout_height="36dp"
             android:padding="0dp"
+            android:layout_gravity="center"
             android:background="@drawable/bg_btn_square_selector"
             android:text="RUN FROM HERE"
             android:textColor="@color/text_primary"
@@ -324,7 +327,7 @@
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />
 
-        <ToggleButton
+        <Button
             android:id="@+id/btnFlood"
             android:layout_width="0dp"
             android:layout_height="36dp"
@@ -332,14 +335,13 @@
             android:layout_weight="1"
             android:padding="0dp"
             android:background="@drawable/bg_btn_square_selector"
-            android:textOn="FLOOD ON"
-            android:textOff="FLOOD OFF"
-            android:textColor="@color/red_dark"
+            android:text="FLOOD OFF"
+            android:textColor="@color/white"
             android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />
 
-        <ToggleButton
+        <Button
             android:id="@+id/btnMist"
             android:layout_width="0dp"
             android:layout_height="36dp"
@@ -347,9 +349,8 @@
             android:layout_weight="1"
             android:padding="0dp"
             android:background="@drawable/bg_btn_square_selector"
-            android:textOn="MIST ON"
-            android:textOff="MIST OFF"
-            android:textColor="@color/red_dark"
+            android:text="MIST OFF"
+            android:textColor="@color/white"
             android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="HardcodedText,TouchTargetSizeCheck" />

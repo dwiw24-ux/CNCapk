@@ -174,7 +174,6 @@ class MainActivity : AppCompatActivity() {
                 requestBluetoothPermission()
                 return@setOnClickListener
             }
-
             if (btService.isConnected) {
                 MaterialAlertDialogBuilder(this)
                     .setTitle("Disconnect Bluetooth")
@@ -215,9 +214,11 @@ class MainActivity : AppCompatActivity() {
             }
             popupMenu.show()
         }
+
         findViewById<ImageView>(R.id.btnUnlock).setOnClickListener {
             btService.send("\$X\n")
         }
+
         findViewById<ImageView>(R.id.btnPower).setOnClickListener {
             MaterialAlertDialogBuilder(this)
                 .setTitle("GRBL Soft Reset")
@@ -230,7 +231,6 @@ class MainActivity : AppCompatActivity() {
                     .setNegativeButton("Batal", null)
                     .show()
         }
-
     }
 
     private fun checkBluetoothPermission(): Boolean {
@@ -301,7 +301,7 @@ class MainActivity : AppCompatActivity() {
                 "Home" -> Color.YELLOW
                 "Alarm" -> Color.RED
                 "Hold" -> Color.RED
-                else -> 0xFFFFFFFF.toInt()
+                else -> Color.RED
             }
         )
 

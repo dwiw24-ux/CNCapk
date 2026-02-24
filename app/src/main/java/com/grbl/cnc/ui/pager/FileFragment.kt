@@ -4,18 +4,15 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
-import android.widget.ToggleButton
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
@@ -29,7 +26,6 @@ import androidx.fragment.app.activityViewModels
 import com.grbl.cnc.grbl.GrblState
 import com.grbl.cnc.ui.StreamKeepAliveService
 import android.content.Context
-import androidx.core.content.ContextCompat
 
 class FileFragment : Fragment(R.layout.frag_file) {
 
@@ -59,10 +55,8 @@ class FileFragment : Fragment(R.layout.frag_file) {
     private var timerRunning = false
     private var waitingOk = false
 
-    enum class StartSource { NONE, RUN, RUN_FROM_HERE }
     enum class RunMode { IDLE, RUNNING, PAUSED }
     private var runMode = RunMode.IDLE
-    private var startSource = StartSource.NONE
 
     data class QueueItem(val cmd: String, val isFileLine: Boolean)
     private val sendQueue = ArrayDeque<QueueItem>()
@@ -74,6 +68,8 @@ class FileFragment : Fragment(R.layout.frag_file) {
     private lateinit var btnPause: Button
     private lateinit var btnOpen: Button
     private lateinit var btnRunFromHere: Button
+    private lateinit var btnFlood: Button
+    private lateinit var btnMist: Button
 
     private val timerHandler = Handler(Looper.getMainLooper())
     private val viewModel: MainViewModel by activityViewModels()
@@ -106,7 +102,11 @@ class FileFragment : Fragment(R.layout.frag_file) {
         progressBar = view.findViewById(R.id.progressRun)
         txtProgress = view.findViewById(R.id.txtProgress)
         txtEta = view.findViewById(R.id.txtEta)
+        txtFeedOv = view.findViewById(R.id.txtFeedOv)
+        txtSpinOv = view.findViewById(R.id.txtSpinOv)
         edtStart = view.findViewById(R.id.edtStartLine)
+        rv = view.findViewById(R.id.rvGcode)
+        rv.layoutManager = LinearLayoutManager(requireContext())
 
         progressBar.progress = 0
         txtProgress.text = "0 %"
@@ -118,6 +118,51 @@ class FileFragment : Fragment(R.layout.frag_file) {
         btnRun = view.findViewById(R.id.btnRun)
         btnOpen = view.findViewById(R.id.btnOpen)
         btnRunFromHere = view.findViewById(R.id.btnRunFromHere)
+        btnFlood = view.findViewById(R.id.btnFlood)
+        btnMist = view.findViewById(R.id.btnMist)
+
+        viewModel.plannerAvailable.observe(viewLifecycleOwner) { planner ->
+            lastPlannerAvailable = planner
+            updateFromPlanner()
+        }
+
+        viewModel.grblRunMode.observe(viewLifecycleOwner) { state ->
+            currentState = state
+            updateButton(currentState)
+        }
+
+        viewModel.spindleRpm.observe(viewLifecycleOwner) { rpm ->
+            val spindleOn = rpm > 0
+            if (spindleOn) {
+                btnSpindle.text = "SPINDLE ON"
+                btnSpindle.setTextColor(Color.GREEN)
+            } else {
+                btnSpindle.text = "SPINDLE OFF"
+                btnSpindle.setTextColor(Color.RED)
+            }
+        }
+
+        viewModel.floodOn.observe(viewLifecycleOwner) { onFlood ->
+            if (onFlood) {
+                btnFlood.text = "FLOOD ON"
+                btnFlood.setTextColor(Color.GREEN)
+
+            } else {
+                btnFlood.text = "FLOOD OFF"
+                btnFlood.setTextColor(Color.RED)
+            }
+        }
+
+        viewModel.mistOn.observe(viewLifecycleOwner) { onMist ->
+            if (onMist) {
+                btnMist.text = "FLOOD ON"
+                btnMist.setTextColor(Color.GREEN)
+
+            } else {
+                btnMist.text = "FLOOD OFF"
+                btnMist.setTextColor(Color.RED)
+            }
+        }
 
         edtStart.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -140,26 +185,13 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 progressBar.progress = percent
                 txtProgress.text = "$percent %"
             }
-
             override fun afterTextChanged(s: android.text.Editable?) {}
         })
-
-        rv = view.findViewById(R.id.rvGcode)
-        rv.layoutManager = LinearLayoutManager(requireContext())
-
-        viewModel.plannerAvailable.observe(viewLifecycleOwner) { planner ->
-            lastPlannerAvailable = planner
-            updateFromPlanner()
-        }
-
-        viewModel.grblRunMode.observe(viewLifecycleOwner) { state ->
-            currentState = state
-            updateButton(currentState)
-        }
 
         btnOpen.setOnClickListener {
             picker.launch(arrayOf("*/*"))
         }
+
         btnRun.setOnClickListener {
             MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Run File : $currentFileName")
@@ -175,6 +207,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 .setNegativeButton("Batal", null)
                 .show()
         }
+
         btnPause.setOnClickListener {
             val bt = (activity as? MainActivity)?.btService ?: return@setOnClickListener
             if (runMode == RunMode.RUNNING) {
@@ -213,8 +246,8 @@ class FileFragment : Fragment(R.layout.frag_file) {
             (activity as? MainActivity)?.btService?.sendRealtime(0x99.toByte())
             txtSpinOv.text = "100%"
         }
-        btnRunFromHere.setOnClickListener {
 
+        btnRunFromHere.setOnClickListener {
             val idx = edtStart.text.toString()
                 .toIntOrNull()
                 ?.minus(1)
@@ -223,8 +256,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
             showRunFromHereWarning(idx)
         }
 
-        // ===== FEED OVERRIDE =====
-        txtFeedOv = view.findViewById(R.id.txtFeedOv)
         view.findViewById<Button>(R.id.btnFeedMinus).setOnClickListener {
             if (feedOv > 10) {
                 feedOv -= 10
@@ -247,8 +278,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
             txtFeedOv.text = "100%"
         }
 
-        txtSpinOv = view.findViewById(R.id.txtSpinOv)
-
         view.findViewById<Button>(R.id.btnSpinMinus).setOnClickListener {
             if (spinOv > 10) {
                 spinOv -= 10
@@ -264,6 +293,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 txtSpinOv.text = "$spinOv%"
             }
         }
+
         view.findViewById<Button>(R.id.btnSpinReset).setOnClickListener {
             spinOv = 100
             (activity as? MainActivity)?.btService?.sendRealtime(0x99.toByte()) // Spindle reset
@@ -271,30 +301,52 @@ class FileFragment : Fragment(R.layout.frag_file) {
         }
 
         btnSpindle.setOnClickListener {
-                (activity as? MainActivity)?.btService?.send("M3 S12000\n")
-        }
-        view.findViewById<ToggleButton>(R.id.btnFlood).setOnCheckedChangeListener {
-                buttonView, isChecked ->
-            if (isChecked) {
-                (activity as? MainActivity)?.btService?.send("M8\n")
-                buttonView.setTextColor(Color.GREEN)
-                buttonView.text="FLOOD ON"
-            }else {
-                (activity as? MainActivity)?.btService?.send("M9\n")
-                buttonView.setTextColor(Color.RED)
-                buttonView.text="FLOOD OFF"
+            val bt = (activity as? MainActivity)?.btService ?: return@setOnClickListener
+            val currentRpm = viewModel.spindleRpm.value ?: 0
+            if (currentState == GrblState.HOLD) {
+                bt.sendRealtime(0x9E.toByte())
+            } else {
+                if (currentRpm > 0) {
+                    bt.send("M5\n")
+                } else {
+                    bt.send("M3 S12000\n")
+                }
             }
         }
-        view.findViewById<ToggleButton>(R.id.btnMist).setOnCheckedChangeListener {
-                buttonView, isChecked ->
-            if (isChecked) {
-                (activity as? MainActivity)?.btService?.send("M7\n")
-                buttonView.setTextColor(Color.GREEN)
-                buttonView.text="MIST ON"
-            }else {
-                (activity as? MainActivity)?.btService?.send("M9\n")
-                buttonView.setTextColor(Color.RED)
-                buttonView.text="MIST OFF"
+
+        btnFlood.setOnClickListener {
+            val bt = (activity as? MainActivity)?.btService ?: return@setOnClickListener
+            val floodStatus = viewModel.floodOn.value ?: false
+            val mistStatus = viewModel.mistOn.value ?: false
+            if (currentState == GrblState.HOLD) {
+                bt.sendRealtime(0xA0.toByte())
+            } else {
+                if (floodStatus) {
+                    bt.send("M9\n")
+                    if (mistStatus) {
+                        bt.send("M7\n")
+                    }
+                }else {
+                    bt.send("M8\n")
+                }
+            }
+        }
+
+        btnMist.setOnClickListener {
+            val bt = (activity as? MainActivity)?.btService ?: return@setOnClickListener
+            val mistStatus = viewModel.mistOn.value ?: false
+            val floodStatus = viewModel.floodOn.value ?: false
+            if (currentState == GrblState.HOLD) {
+                bt.sendRealtime(0xA1.toByte())
+            } else {
+                if (mistStatus) {
+                    bt.send("M9\n")
+                    if (floodStatus) {
+                        bt.send("M8\n")
+                    }
+                }else {
+                    bt.send("M7\n")
+                }
             }
         }
 
@@ -306,12 +358,10 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 if (lastSentItem?.isFileLine == true) {
                     current++
                 }
-
                 if (sendQueue.isEmpty() && current >= lines.size) {
                     stopRunFinished()
                     return@runOnUiThread
                 }
-
                 if (runMode == RunMode.RUNNING && !waitingOk) {
                     sendNext()
                 }
@@ -377,7 +427,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
         pausedDuration = 0
         timerRunning = true
         timerHandler.post(timerRunnable)
-
         edtStart.setText("1")
 
         sendNext()
@@ -630,15 +679,11 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 btnOpen.isEnabled = true
                 btnPause.isEnabled = false
                 btnStop.isEnabled = false
-                btnSpindle.text = "SPINDLE OFF"
-                btnRun.setTextColor(ContextCompat.getColor(btnRun.context,R.color.offsetActive))
-                btnSpindle.setTextColor(ContextCompat.getColor(btnSpindle.context,R.color.white))
-                btnRunFromHere.setTextColor(ContextCompat.getColor(btnRunFromHere.context,R.color.offsetActive))
-                btnPause.setTextColor(ContextCompat.getColor(btnPause.context,R.color.cnc_text_disabled))
-                btnStop.setTextColor(ContextCompat.getColor(btnStop.context,R.color.cnc_text_disabled))
-                btnOpen.setTextColor(ContextCompat.getColor(btnOpen.context,R.color.offsetActive))
-
-                startSource = StartSource.NONE
+                btnRun.setTextColor(Color.GREEN)
+                btnRunFromHere.setTextColor(Color.GREEN)
+                btnPause.setTextColor(Color.GRAY)
+                btnStop.setTextColor(Color.GRAY)
+                btnOpen.setTextColor(Color.GREEN)
             }
             GrblState.RUN -> {
                 btnRun.isEnabled = false
@@ -647,13 +692,11 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 btnOpen.isEnabled = false
                 btnPause.isEnabled = true
                 btnStop.isEnabled = true
-                btnSpindle.text = "SPINDLE ON"
-                btnRun.setTextColor(ContextCompat.getColor(btnRun.context, R.color.cnc_text_disabled))
-                btnRunFromHere.setTextColor(ContextCompat.getColor(btnRunFromHere.context,R.color.cnc_text_disabled))
-                btnSpindle.setTextColor(ContextCompat.getColor(btnSpindle.context,R.color.offsetActive))
-                btnPause.setTextColor(ContextCompat.getColor(btnPause.context,R.color.offsetActive))
-                btnStop.setTextColor(ContextCompat.getColor(btnStop.context,R.color.offsetActive))
-                btnOpen.setTextColor(ContextCompat.getColor(btnOpen.context,R.color.cnc_text_disabled))
+                btnRun.setTextColor(Color.GRAY)
+                btnRunFromHere.setTextColor(Color.GRAY)
+                btnPause.setTextColor(Color.GREEN)
+                btnStop.setTextColor(Color.GREEN)
+                btnOpen.setTextColor(Color.GRAY)
             }
             GrblState.ALARM -> {
                 btnRun.isEnabled = false
@@ -662,13 +705,11 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 btnOpen.isEnabled = false
                 btnPause.isEnabled = false
                 btnStop.isEnabled = false
-                btnSpindle.text = "SPINDLE OFF"
-                btnRun.setTextColor(ContextCompat.getColor(btnRun.context,R.color.cnc_text_disabled))
-                btnSpindle.setTextColor(ContextCompat.getColor(btnSpindle.context,R.color.cnc_text_disabled))
-                btnRunFromHere.setTextColor(ContextCompat.getColor(btnRunFromHere.context,R.color.cnc_text_disabled))
-                btnPause.setTextColor(ContextCompat.getColor(btnPause.context,R.color.cnc_text_disabled))
-                btnStop.setTextColor(ContextCompat.getColor(btnStop.context,R.color.cnc_text_disabled))
-                btnOpen.setTextColor(ContextCompat.getColor(btnOpen.context,R.color.cnc_text_disabled))
+                btnRun.setTextColor(Color.GRAY)
+                btnRunFromHere.setTextColor(Color.GRAY)
+                btnPause.setTextColor(Color.GRAY)
+                btnStop.setTextColor(Color.GRAY)
+                btnOpen.setTextColor(Color.GRAY)
             }
             GrblState.HOLD -> {
                 btnRun.isEnabled = false
@@ -677,14 +718,18 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 btnOpen.isEnabled = false
                 btnPause.isEnabled = true
                 btnStop.isEnabled = true
-                btnRun.setTextColor(ContextCompat.getColor(btnRun.context,R.color.cnc_text_disabled))
-                btnSpindle.setTextColor(ContextCompat.getColor(btnSpindle.context,R.color.white))
-                btnRunFromHere.setTextColor(ContextCompat.getColor(btnRunFromHere.context,R.color.cnc_text_disabled))
-                btnPause.setTextColor(ContextCompat.getColor(btnPause.context,R.color.cnc_warning))
-                btnStop.setTextColor(ContextCompat.getColor(btnStop.context,R.color.cnc_warning))
-                btnOpen.setTextColor(ContextCompat.getColor(btnOpen.context,R.color.cnc_text_disabled))
+                btnRun.setTextColor(Color.GRAY)
+                btnRunFromHere.setTextColor(Color.GRAY)
+                btnPause.setTextColor(Color.YELLOW)
+                btnStop.setTextColor(Color.YELLOW)
+                btnOpen.setTextColor(Color.GRAY)
             }
             else -> {
+                btnRun.setTextColor(Color.GRAY)
+                btnRunFromHere.setTextColor(Color.GRAY)
+                btnPause.setTextColor(Color.GRAY)
+                btnStop.setTextColor(Color.GRAY)
+                btnOpen.setTextColor(Color.GRAY)
 
             }
         }
