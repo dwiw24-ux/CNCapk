@@ -26,6 +26,7 @@ import androidx.fragment.app.activityViewModels
 import com.grbl.cnc.grbl.GrblState
 import com.grbl.cnc.ui.StreamKeepAliveService
 import android.content.Context
+import com.grbl.cnc.grbl.SpindleDirection
 
 class FileFragment : Fragment(R.layout.frag_file) {
 
@@ -129,6 +130,10 @@ class FileFragment : Fragment(R.layout.frag_file) {
         viewModel.grblRunMode.observe(viewLifecycleOwner) { state ->
             currentState = state
             updateButton(currentState)
+
+            if (state == GrblState.ALARM) {
+                abortStreamingByAlarm()
+            }
         }
 
         viewModel.spindleRpm.observe(viewLifecycleOwner) { rpm ->
@@ -141,6 +146,25 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 btnSpindle.setTextColor(Color.RED)
             }
         }
+
+        /**viewModel.spindleDirection.observe(viewLifecycleOwner) { dir ->
+            when (dir) {
+                SpindleDirection.CW -> {
+                    //btnSpindle.text = "SPINDLE CW"
+                    //btnSpindle.setTextColor(Color.GREEN)
+                }
+
+                SpindleDirection.CCW -> {
+                    //btnSpindle.text = "SPINDLE CCW"
+                    //btnSpindle.setTextColor(Color.CYAN)
+                }
+
+                SpindleDirection.OFF -> {
+                    //btnSpindle.text = "SPINDLE OFF"
+                    //btnSpindle.setTextColor(Color.RED)
+                }
+            }
+        }*/
 
         viewModel.floodOn.observe(viewLifecycleOwner) { onFlood ->
             if (onFlood) {
@@ -213,12 +237,14 @@ class FileFragment : Fragment(R.layout.frag_file) {
             if (runMode == RunMode.RUNNING) {
                 bt.send("!")
                 runMode = RunMode.PAUSED
+                btnPause.text = "RESUME"
                 pauseStart = System.currentTimeMillis()
             } else if (runMode == RunMode.PAUSED) {
                 bt.send("~")
 
                 pausedDuration += System.currentTimeMillis() - pauseStart
                 runMode = RunMode.RUNNING
+                btnPause.text = "HOLD"
 
                 if (!waitingOk) {
                     sendNext()
@@ -434,6 +460,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
     private fun sendNext() {
         if (runMode != RunMode.RUNNING) return
+        if (currentState == GrblState.ALARM) return
         if (waitingOk) return
         if (sendQueue.isEmpty()) return
 
@@ -640,6 +667,31 @@ class FileFragment : Fragment(R.layout.frag_file) {
         txtSpinOv.text = "100%"
     }
 
+    @SuppressLint("SetTextI18n")
+    private fun abortStreamingByAlarm() {
+
+        if (runMode == RunMode.IDLE) return
+
+        runMode = RunMode.IDLE
+        waitingOk = false
+        sendQueue.clear()
+        lastSentItem = null
+
+        timerRunning = false
+        timerHandler.removeCallbacks(timerRunnable)
+
+        (activity as? MainActivity)?.isStreaming = false
+
+        progressBar.progress = 0
+        txtProgress.text = "0 %"
+
+        Toast.makeText(
+            requireContext(),
+            "ALARM detected. Job cancelled.",
+            Toast.LENGTH_LONG
+        ).show()
+    }
+
     @SuppressLint("NotifyDataSetChanged", "SetTextI18n")
     fun updateFromPlanner() {
         val totalPlanner = 16
@@ -666,6 +718,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
         val intent = Intent(requireContext(), StreamKeepAliveService::class.java).apply {
             action = StreamKeepAliveService.ACTION_UPDATE_PROGRESS
             putExtra(StreamKeepAliveService.EXTRA_PROGRESS, progress)
+            putExtra(StreamKeepAliveService.EXTRA_FILENAME, currentFileName)
         }
         requireContext().startService(intent)
     }
@@ -694,8 +747,8 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 btnStop.isEnabled = true
                 btnRun.setTextColor(Color.GRAY)
                 btnRunFromHere.setTextColor(Color.GRAY)
-                btnPause.setTextColor(Color.GREEN)
-                btnStop.setTextColor(Color.GREEN)
+                btnPause.setTextColor(Color.YELLOW)
+                btnStop.setTextColor(Color.RED)
                 btnOpen.setTextColor(Color.GRAY)
             }
             GrblState.ALARM -> {
@@ -721,7 +774,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 btnRun.setTextColor(Color.GRAY)
                 btnRunFromHere.setTextColor(Color.GRAY)
                 btnPause.setTextColor(Color.YELLOW)
-                btnStop.setTextColor(Color.YELLOW)
+                btnStop.setTextColor(Color.RED)
                 btnOpen.setTextColor(Color.GRAY)
             }
             else -> {

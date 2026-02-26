@@ -146,16 +146,6 @@ class BluetoothService(private val context: Context) {
         }
     }
 
-    fun spindleRealtime(cmd: String) {
-        try {
-            output?.write(cmd.toByteArray(Charsets.US_ASCII))
-            output?.flush()
-            //Log.d("BT_SEND", "send: $cmd")
-        } catch (e: Exception) {
-            disconnect()
-        }
-    }
-
     fun disconnect() {
         try {
             isConnected = false

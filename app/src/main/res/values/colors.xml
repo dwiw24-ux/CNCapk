@@ -33,6 +33,9 @@
     <!-- Status -->
     <color name="cnc_ok">#00C853</color>
     <color name="red_dark">#B00020</color>
+    <color name="red">#FF0000</color>
+    <color name="green">#00FF00</color>
+    <color name="yellow">#FFFF00</color>
     <color name="bg_dark">#121212</color>
     <color name="card_dark">#1E1E1E</color>
     <color name="text_primary">#FFFFFF</color>

@@ -17,6 +17,7 @@
         android:orientation="vertical">
 
         <TextView
+            android:id="@+id/txtAppName"
             android:text="Dwi Creative CNC"
             android:textColor="#00E676"
             android:textSize="20sp"
@@ -54,26 +55,15 @@
             android:background="#00FFFFFF"
             android:padding="12dp"
             android:src="@drawable/ic_alarm"
-            app:tint="#00E676"
+            app:tint="@color/red"
             android:contentDescription="UNLOCK"
             tools:ignore="HardcodedText" />
 
         <ImageButton
             android:id="@+id/btnBluetooth"
             android:src="@drawable/ic_bluetooth"
-            app:tint="#00E676"
+            app:tint="@color/white"
             android:contentDescription="BLUETOOTH"
-            android:padding="12dp"
-            android:background="#00FFFFFF"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            tools:ignore="HardcodedText" />
-
-        <ImageButton
-            android:id="@+id/btnPower"
-            android:src="@drawable/ic_power"
-            app:tint="#00E676"
-            android:contentDescription="RESET"
             android:padding="12dp"
             android:background="#00FFFFFF"
             android:layout_width="wrap_content"

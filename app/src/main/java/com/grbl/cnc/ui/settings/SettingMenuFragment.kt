@@ -3,6 +3,7 @@ package com.grbl.cnc.ui.settings
 import android.content.Context
 import android.os.Bundle
 import android.view.View
+import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DividerItemDecoration
@@ -16,6 +17,13 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val prefs = requireContext().getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
         val list = listOf(
+            SettingItem(
+                R.drawable.ic_settings_applications_black_24dp,
+                "Setting App Name",
+                "Current app name : ${
+                    prefs.getString("app_name", "GRBL Bluetooth")}",
+                "appName"
+            ),
             SettingItem(
                 R.drawable.ic_settings_applications_black_24dp,
                 "Probe Setting",
@@ -47,6 +55,9 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
 
         val adapter = SettingAdapter(list) { item ->
             when (item.key) {
+                "appName" -> {
+                    appNameDialog()
+                }
                 "probe" -> {
                     parentFragmentManager.beginTransaction()
                         .replace(R.id.settingContainer, SettingProbeFragment())
@@ -133,5 +144,37 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
             .setNegativeButton("Cancel", null)
             .show()
 
+    }
+
+    private fun appNameDialog() {
+        val prefs = requireContext()
+            .getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
+
+        val editText = EditText(requireContext())
+        editText.setText(prefs.getString("app_name", "GRBL Bluetooth"))
+        editText.setSelection(editText.text.length)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Set App Name")
+            .setView(editText)
+            .setPositiveButton("Save") { dialog, _ ->
+
+                val name = editText.text.toString().trim()
+
+                if (name.isNotEmpty()) {
+                    prefs.edit()
+                        .putString("app_name", name)
+                        .apply()
+                }
+
+                dialog.dismiss()
+
+                // Refresh fragment supaya deskripsi update
+                parentFragmentManager.beginTransaction()
+                    .replace(R.id.settingContainer, SettingMenuFragment())
+                    .commit()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 }

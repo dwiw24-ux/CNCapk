@@ -3,7 +3,6 @@ package com.grbl.cnc.ui
 import android.os.Bundle
 import android.view.View
 import android.widget.ImageButton
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -18,7 +17,6 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.grbl.cnc.bluetooth.BluetoothService
 import android.Manifest
 import android.annotation.SuppressLint
-import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -37,9 +35,9 @@ import com.grbl.cnc.grbl.GrblStatus
 import com.grbl.cnc.ui.pager.ConsoleFragment
 import java.util.Locale
 import androidx.activity.viewModels
-import com.grbl.cnc.ui.SettingActivity
 import com.grbl.cnc.ui.pager.MainViewModel
 import android.util.Log
+import com.grbl.cnc.grbl.GrblState
 
 class MainActivity : AppCompatActivity() {
 
@@ -47,6 +45,7 @@ class MainActivity : AppCompatActivity() {
     var isJogging = false
     var pendingGrblConnect = false
 
+    private lateinit var txtAppName: TextView
     private lateinit var txtStatus: TextView
     private lateinit var txtWcs: TextView
     private lateinit var txtStatusGrbl: TextView
@@ -62,8 +61,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var txtLimY: TextView
     private lateinit var txtLimZ: TextView
 
+    private lateinit var btnBluetooth: ImageButton
+    private lateinit var btnUnlock: ImageButton
+    private lateinit var btnMenu: ImageButton
+
     private val viewModel: MainViewModel by viewModels()
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var currentState: GrblState = GrblState.UNKNOWN
 
     lateinit var btService: BluetoothService
     lateinit var consoleFragment: ConsoleFragment
@@ -91,6 +95,7 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
+        txtAppName = findViewById(R.id.txtAppName)
         txtStatus = findViewById(R.id.txtStatus)
         txtStatusGrbl = findViewById(R.id.txtStatusGrbl)
         txtWcs = findViewById(R.id.txtWcs)
@@ -113,6 +118,22 @@ class MainActivity : AppCompatActivity() {
         txtwposX.setOnClickListener { showWPosDialog('X') }
         txtwposY.setOnClickListener { showWPosDialog('Y') }
         txtwposZ.setOnClickListener { showWPosDialog('Z') }
+
+        btnBluetooth = findViewById(R.id.btnBluetooth)
+        btnUnlock = findViewById(R.id.btnUnlock)
+        btnMenu = findViewById(R.id.btnMenu)
+
+        viewModel.grblRunMode.observe(this) { state ->
+            currentState = state
+            when (state) {
+                GrblState.ALARM -> {
+                    btnUnlock.setImageResource(R.drawable.ic_notifications)
+                }
+                else -> {
+                    btnUnlock.setImageResource(R.drawable.ic_lock_reset)
+                }
+            }
+        }
 
         val viewPager = findViewById<ViewPager2>(R.id.viewPager)
         val tabLayout = findViewById<TabLayout>(R.id.tabLayout)
@@ -169,7 +190,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        findViewById<ImageButton>(R.id.btnBluetooth).setOnClickListener {
+        btnBluetooth.setOnClickListener {
             if (!checkBluetoothPermission()) {
                 requestBluetoothPermission()
                 return@setOnClickListener
@@ -188,7 +209,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        findViewById<ImageView>(R.id.btnMenu).setOnClickListener{ view ->
+        btnMenu.setOnClickListener{ view ->
             val popupMenu = PopupMenu(this, view)
             popupMenu.menuInflater.inflate(R.menu.menu_main, popupMenu.menu)
 
@@ -215,21 +236,21 @@ class MainActivity : AppCompatActivity() {
             popupMenu.show()
         }
 
-        findViewById<ImageView>(R.id.btnUnlock).setOnClickListener {
-            btService.send("\$X\n")
-        }
-
-        findViewById<ImageView>(R.id.btnPower).setOnClickListener {
-            MaterialAlertDialogBuilder(this)
-                .setTitle("GRBL Soft Reset")
-                .setMessage("Lanjutkan ?")
-                .setPositiveButton("Ok") { _, _ ->
-                    if (btService.isConnected){
-                        btService.sendRealtime(0x18.toByte())
+        btnUnlock.setOnClickListener {
+            if (currentState == GrblState.ALARM) {
+                btService.send("\$X\n")
+            } else {
+                MaterialAlertDialogBuilder(this)
+                    .setTitle("GRBL Soft Reset")
+                    .setMessage("Lanjutkan ?")
+                    .setPositiveButton("Ok") { _, _ ->
+                        if (btService.isConnected){
+                            btService.sendRealtime(0x18.toByte())
+                        }
                     }
-                }
                     .setNegativeButton("Batal", null)
                     .show()
+            }
         }
     }
 
@@ -357,22 +378,35 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getUpdateInterval(): Long {
-        val prefs = getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("cnc_settings", MODE_PRIVATE)
         return prefs.getInt("polling_interval", 100).toLong()
     }
 
     private val preferenceListener =
-        SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == "polling_interval") {
-                handler.removeCallbacks(statusRunnable)
-                handler.post(statusRunnable)
+        SharedPreferences.OnSharedPreferenceChangeListener { sharedPreferences, key ->
+
+            when (key) {
+                "polling_interval" -> {
+                    handler.removeCallbacks(statusRunnable)
+                    handler.post(statusRunnable)
+                }
+
+                "app_name" -> {
+                    val appName = sharedPreferences.getString("app_name", "GRBL Bluetooth")
+                    txtAppName.text = appName
+                }
             }
         }
 
     override fun onResume() {
         super.onResume()
-        getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
-            .registerOnSharedPreferenceChangeListener(preferenceListener)
+        val prefs = getSharedPreferences("cnc_settings", MODE_PRIVATE)
+
+        val appName = prefs.getString("app_name", "GRBL Bluetooth")
+
+        txtAppName.text = appName
+
+        prefs.registerOnSharedPreferenceChangeListener(preferenceListener)
 
         if (btService.isConnected) {
             handler.post(statusRunnable)
@@ -381,7 +415,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
+        getSharedPreferences("cnc_settings", MODE_PRIVATE)
             .unregisterOnSharedPreferenceChangeListener(preferenceListener)
 
         handler.removeCallbacks(statusRunnable)
@@ -469,11 +503,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun notificationPermission() {
         if (Build.VERSION.SDK_INT >= 33) {
-            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
 
                 requestPermissions(
-                    arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
                     100
                 )
             }

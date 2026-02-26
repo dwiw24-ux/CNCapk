@@ -21,8 +21,10 @@ class StreamKeepAliveService : Service() {
         const val ACTION_STOP = "STOP_SERVICE"
         const val ACTION_UPDATE_PROGRESS = "UPDATE_PROGRESS"
         const val EXTRA_PROGRESS = "progress"
+        const val EXTRA_FILENAME = "filename"
     }
 
+    private var currentFileName: String = ""
     private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onCreate() {
@@ -42,6 +44,11 @@ class StreamKeepAliveService : Service() {
 
         // ⭐ Update progress
         if (intent?.action == ACTION_UPDATE_PROGRESS) {
+
+            intent.getStringExtra(EXTRA_FILENAME)?.let {
+                currentFileName = it
+            }
+
             val progress = intent.getIntExtra(EXTRA_PROGRESS, 0)
             updateProgressNotification(progress)
             return START_STICKY
@@ -100,10 +107,10 @@ class StreamKeepAliveService : Service() {
 
     val notification = NotificationCompat.Builder(this, CHANNEL_ID)
         .setContentTitle("File Streaming")
-        .setContentText("Progress $progress%")
+        .setContentText("$currentFileName • $progress%")
         .setSmallIcon(android.R.drawable.stat_sys_upload)
         .setOngoing(true)
-        .setProgress(100, progress, false)
+        //.setProgress(100, progress, false)
         .build()
 
     val manager = getSystemService(NotificationManager::class.java)

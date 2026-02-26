@@ -19,6 +19,7 @@ import android.widget.Toast
 import androidx.fragment.app.activityViewModels
 import com.grbl.cnc.grbl.GrblState
 import kotlin.getValue
+import androidx.appcompat.app.AlertDialog
 
 class JogFragment : Fragment(R.layout.frag_jog) {
 
@@ -39,6 +40,19 @@ class JogFragment : Fragment(R.layout.frag_jog) {
 
     private val viewModel: MainViewModel by activityViewModels()
     private var currentState: GrblState = GrblState.UNKNOWN
+    private val jogButtons = mutableListOf<ImageButton>()
+    private lateinit var btnHoming : ImageButton
+    private lateinit var btnStop: ImageButton
+    private lateinit var jogGo0: Button
+    private lateinit var jogAll0: Button
+    private lateinit var jogX0: Button
+    private lateinit var jogY0: Button
+    private lateinit var jogZ0: Button
+    private lateinit var g54: Button
+    private lateinit var g55: Button
+    private lateinit var g56: Button
+    private lateinit var g57: Button
+    private lateinit var btnProbe: Button
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -49,12 +63,59 @@ class JogFragment : Fragment(R.layout.frag_jog) {
         val seekStep = view.findViewById<SeekBar>(R.id.seekStep)
         val seekFeed = view.findViewById<SeekBar>(R.id.seekFeed)
 
+        btnHoming = view.findViewById(R.id.btnHoming)
+        btnStop = view.findViewById(R.id.btnStop)
+        jogGo0 = view.findViewById(R.id.jogGo0)
+        jogAll0 = view.findViewById(R.id.jogAll0)
+        jogX0 = view.findViewById(R.id.jogX0)
+        jogY0 = view.findViewById(R.id.jogY0)
+        jogZ0 = view.findViewById(R.id.jogZ0)
+        g54 = view.findViewById(R.id.g54)
+        g55 = view.findViewById(R.id.g55)
+        g56 = view.findViewById(R.id.g56)
+        g57 = view.findViewById(R.id.g57)
+        btnProbe = view.findViewById(R.id.btnProbe)
+
         viewModel.grblRunMode.observe(viewLifecycleOwner) { state ->
             currentState = state
+
+            val enableJog = state == GrblState.IDLE || state == GrblState.JOG
+            jogButtons.forEach {
+                it.isEnabled = enableJog
+                it.alpha = if (enableJog) 1f else 0.4f
+            }
+            if (!enableJog) {
+                stopJog()
+            }
+
+            val idleOnly = (state == GrblState.IDLE)
+            btnHoming.isEnabled = idleOnly
+            jogGo0.isEnabled = idleOnly
+            jogAll0.isEnabled = idleOnly
+            jogX0.isEnabled = idleOnly
+            jogY0.isEnabled = idleOnly
+            jogZ0.isEnabled = idleOnly
+            g54.isEnabled = idleOnly
+            g55.isEnabled = idleOnly
+            g56.isEnabled = idleOnly
+            g57.isEnabled = idleOnly
+            btnProbe.isEnabled = idleOnly
+
+            val alpha = if (idleOnly) 1f else 0.4f
+            btnHoming.alpha = alpha
+            jogGo0.alpha = alpha
+            jogAll0.alpha = alpha
+            jogX0.alpha = alpha
+            jogY0.alpha = alpha
+            jogZ0.alpha = alpha
+            g54.alpha = alpha
+            g55.alpha = alpha
+            g56.alpha = alpha
+            g57.alpha = alpha
+            btnProbe.alpha = alpha
         }
 
         seekStep.progress = 50 // default
-
         seekStep.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar, p: Int, fromUser: Boolean) {
                 step = when {
@@ -71,7 +132,6 @@ class JogFragment : Fragment(R.layout.frag_jog) {
         })
 
         seekFeed.progress = feed
-
         seekFeed.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             @SuppressLint("SetTextI18n")
             override fun onProgressChanged(sb: SeekBar, p: Int, fromUser: Boolean) {
@@ -84,58 +144,67 @@ class JogFragment : Fragment(R.layout.frag_jog) {
 
         bindJogButton(view, R.id.btnXPlus, "X", 1)
         bindJogButton(view, R.id.btnXMinus, "X", -1)
-
         bindJogButton(view, R.id.btnYPlus, "Y", 1)
         bindJogButton(view, R.id.btnYMinus, "Y", -1)
-
         bindJogButton(view, R.id.btnZPlus, "Z", 1)
         bindJogButton(view, R.id.btnZMinus, "Z", -1)
 
-        view.findViewById<ImageButton>(R.id.btnHoming).setOnClickListener {
-            (activity as? MainActivity)?.btService?.send("\$H\n")
-        }
-        view.findViewById<ImageButton>(R.id.btnStop).setOnClickListener {
-            (activity as? MainActivity)?.btService?.sendRealtime(0x85.toByte())
-        }
-        view.findViewById<Button>(R.id.jogGo0).setOnClickListener {
-            (activity as? MainActivity)?.btService?.send("G90\n")
-            (activity as? MainActivity)?.btService?.send("G53 G0 Z0\n")
-            (activity as? MainActivity)?.btService?.send("G90 G0 X0 Y0\n")
-            (activity as? MainActivity)?.btService?.send("G90 G0 Z0\n")
-        }
-        view.findViewById<Button>(R.id.jogAll0).setOnClickListener {
-            (activity as? MainActivity)?.btService?.send("G10 L20 P0 X0Y0Z0\n")
-        }
-        view.findViewById<Button>(R.id.jogX0).setOnClickListener {
-            (activity as? MainActivity)?.btService?.send("G10 L20 P0 X0\n")
-        }
-        view.findViewById<Button>(R.id.jogY0).setOnClickListener {
-            (activity as? MainActivity)?.btService?.send("G10 L20 P0 Y0\n")
-        }
-        view.findViewById<Button>(R.id.jogZ0).setOnClickListener {
-            (activity as? MainActivity)?.btService?.send("G10 L20 P0 Z0\n")
-        }
-        view.findViewById<Button>(R.id.g54).setOnClickListener {
-            (activity as? MainActivity)?.btService?.send("G54\n")
-            (activity as? MainActivity)?.btService?.send("\$G\n")
-        }
-        view.findViewById<Button>(R.id.g55).setOnClickListener {
-            (activity as? MainActivity)?.btService?.send("G55\n")
-            (activity as? MainActivity)?.btService?.send("\$G\n")
-        }
-        view.findViewById<Button>(R.id.g56).setOnClickListener {
-            (activity as? MainActivity)?.btService?.send("G56\n")
-            (activity as? MainActivity)?.btService?.send("\$G\n")
-        }
-        view.findViewById<Button>(R.id.g57).setOnClickListener {
-            (activity as? MainActivity)?.btService?.send("G57\n")
-            (activity as? MainActivity)?.btService?.send("\$G\n")
-        }
-        view.findViewById<Button>(R.id.btnProbe).setOnClickListener {
-            if (currentState != GrblState.IDLE) {
-                Toast.makeText(requireContext(), "Tunggu Idle Dahulu", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+        btnHoming.setOnClickListener {
+            showConfirmDialog(
+                "HOMONG",
+                "Run homing cycle?"
+            ) {
+                sendCommand("\$H\n")
             }
+        }
+        btnStop.setOnClickListener {
+                (activity as? MainActivity)?.btService?.sendRealtime(0x85.toByte())
+        }
+        jogGo0.setOnClickListener {
+            showConfirmDialog(
+                "GO TO ZERO",
+                "Move to zero work coordinate?"
+            ) {
+                sendCommand("G90\n")
+                sendCommand("G53 G0 Z0\n")
+                sendCommand("G90 G0 X0 Y0\n")
+                sendCommand("G90 G0 Z0\n")
+            }
+        }
+        jogAll0.setOnClickListener {
+            showConfirmDialog(
+                "ZERO ALL",
+                "Set zero all axiz?"
+            ) {
+                sendCommand("G10 L20 P0 X0Y0Z0\n")
+            }
+        }
+        jogX0.setOnClickListener {
+            sendCommand("G10 L20 P0 X0\n")
+        }
+        jogY0.setOnClickListener {
+            sendCommand("G10 L20 P0 Y0\n")
+        }
+        jogZ0.setOnClickListener {
+            sendCommand("G10 L20 P0 Z0\n")
+        }
+        g54.setOnClickListener {
+            sendCommand("G54\n")
+            sendCommand("\$G\n")
+        }
+        g55.setOnClickListener {
+            sendCommand("G55\n")
+            sendCommand("\$G\n")
+        }
+        g56.setOnClickListener {
+            sendCommand("G56\n")
+            sendCommand("\$G\n")
+        }
+        g57.setOnClickListener {
+            sendCommand("G57\n")
+            sendCommand("\$G\n")
+        }
+        btnProbe.setOnClickListener {
 
             val prefs = requireContext().getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
 
@@ -145,23 +214,31 @@ class JogFragment : Fragment(R.layout.frag_jog) {
             probePlate = prefs.getFloat("probe_plate", 1.5f)
             probeRetract = prefs.getFloat("probe_retract", 5f)
 
-            val bt = (activity as? MainActivity)?.btService ?: return@setOnClickListener
+            showConfirmDialog(
+                "PROBE",
+                "Run Probe Z axiz ?"
+            ) {
+                sendCommand("G4 P2\n")
+                sendCommand("G91\n")
+                sendCommand("G38.2 Z-$probeDist F$probeFeedFast\n")
+                sendCommand("G10 L20 P0 Z$probePlate\n")
 
-            bt.send("G4 P2\n")
-            bt.send("G91\n")
-            bt.send("G38.2 Z-$probeDist F$probeFeedFast\n")
-            bt.send("G10 L20 P0 Z$probePlate\n")
+                sendCommand("G4 P1\n")
+                sendCommand("G0 Z$probeRetract\n")
+                sendCommand("G4 P1\n")
+                sendCommand("G38.2 Z-$probeDist F$probeFeedSlow\n")
+                sendCommand("G10 L20 P0 Z1.500\n")
 
-            bt.send("G4 P1\n")
-            bt.send("G0 Z$probeRetract\n")
-            bt.send("G4 P1\n")
-            bt.send("G38.2 Z-$probeDist F$probeFeedSlow\n")
-            bt.send("G10 L20 P0 Z1.500\n")
-
-            bt.send("G4 P1\n")
-            bt.send("G0 Z$probeRetract\n")
-            bt.send("G90\n")
+                sendCommand("G4 P1\n")
+                sendCommand("G0 Z$probeRetract\n")
+                sendCommand("G90\n")
+            }
         }
+    }
+
+    private fun sendCommand(cmd: String) {
+        val blu = (activity as? MainActivity)?.btService ?: return
+        blu.send(cmd)
     }
 
     private fun sendJog(axis: String, dir: Int) {
@@ -189,6 +266,8 @@ class JogFragment : Fragment(R.layout.frag_jog) {
         dir: Int
     ) {
         val btn = root.findViewById<ImageButton>(id)
+
+        jogButtons.add(btn)
 
         btn.setOnTouchListener { v, event ->
             when (event.action) {
@@ -221,5 +300,20 @@ class JogFragment : Fragment(R.layout.frag_jog) {
             }
             true
         }
+    }
+
+    private fun showConfirmDialog(
+        title: String,
+        message: String,
+        onConfirm: () -> Unit
+    ) {
+        AlertDialog.Builder(requireContext())
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton("YES") { _, _ ->
+                onConfirm()
+            }
+            .setNegativeButton("CANCEL", null)
+            .show()
     }
 }

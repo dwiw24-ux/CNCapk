@@ -114,7 +114,7 @@
             android:layout_column="4"
             android:scaleType="centerInside"
             android:layout_margin="2dp"
-            style="@style/jogImgBtnDark"
+            style="@style/jogBtnRed"
             tools:ignore="HardcodedText" />
         <ImageButton
             android:id="@+id/btnYMinus"
@@ -155,7 +155,7 @@
             android:padding="0dp"
             android:text="GO TO ZERO"
             android:textAlignment="center"
-            android:textColor="@color/text_primary"
+            android:textColor="@color/white"
             android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="ButtonStyle,HardcodedText,TouchTargetSizeCheck,VisualLintButtonSize" />
@@ -169,7 +169,7 @@
             android:background="@drawable/bg_btn_square_selector"
             android:padding="0dp"
             android:text="PROBE"
-            android:textColor="@color/text_primary"
+            android:textColor="@color/white"
             android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="ButtonStyle,HardcodedText,TouchTargetSizeCheck,VisualLintButtonSize" />
@@ -183,7 +183,7 @@
             android:background="@drawable/bg_btn_square_selector"
             android:padding="0dp"
             android:text="ZERO ALL"
-            android:textColor="@color/text_primary"
+            android:textColor="@color/white"
             android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="ButtonStyle,HardcodedText,TouchTargetSizeCheck,VisualLintButtonSize" />
@@ -204,7 +204,7 @@
             android:background="@drawable/bg_btn_square_selector"
             android:padding="0dp"
             android:text="ZERO X"
-            android:textColor="@color/text_primary"
+            android:textColor="@color/white"
             android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="ButtonStyle,HardcodedText,TouchTargetSizeCheck,VisualLintButtonSize" />
@@ -218,7 +218,7 @@
             android:background="@drawable/bg_btn_square_selector"
             android:padding="0dp"
             android:text="ZERO Y"
-            android:textColor="@color/text_primary"
+            android:textColor="@color/white"
             android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="ButtonStyle,HardcodedText,TouchTargetSizeCheck,VisualLintButtonSize" />
@@ -232,7 +232,7 @@
             android:background="@drawable/bg_btn_square_selector"
             android:padding="0dp"
             android:text="ZERO Z"
-            android:textColor="@color/text_primary"
+            android:textColor="@color/white"
             android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="ButtonStyle,HardcodedText,TouchTargetSizeCheck,VisualLintButtonSize" />
@@ -254,7 +254,7 @@
             android:padding="0dp"
             android:text="G54"
             android:textAlignment="center"
-            android:textColor="@color/text_primary"
+            android:textColor="@color/white"
             android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="ButtonStyle,HardcodedText,TouchTargetSizeCheck,VisualLintButtonSize" />
@@ -268,7 +268,7 @@
             android:background="@drawable/bg_btn_square_selector"
             android:padding="0dp"
             android:text="G55"
-            android:textColor="@color/text_primary"
+            android:textColor="@color/white"
             android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="ButtonStyle,HardcodedText,TouchTargetSizeCheck,VisualLintButtonSize" />
@@ -282,7 +282,7 @@
             android:background="@drawable/bg_btn_square_selector"
             android:padding="0dp"
             android:text="G56"
-            android:textColor="@color/text_primary"
+            android:textColor="@color/white"
             android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="ButtonStyle,HardcodedText,TouchTargetSizeCheck,VisualLintButtonSize" />
@@ -296,7 +296,7 @@
             android:background="@drawable/bg_btn_square_selector"
             android:padding="0dp"
             android:text="G57"
-            android:textColor="@color/text_primary"
+            android:textColor="@color/white"
             android:textSize="12sp"
             app:backgroundTint="@null"
             tools:ignore="ButtonStyle,HardcodedText,TouchTargetSizeCheck,VisualLintButtonSize" />
