@@ -26,6 +26,7 @@ import androidx.fragment.app.activityViewModels
 import com.grbl.cnc.grbl.GrblState
 import com.grbl.cnc.ui.StreamKeepAliveService
 import android.content.Context
+import android.util.Log
 import com.grbl.cnc.grbl.SpindleDirection
 
 class FileFragment : Fragment(R.layout.frag_file) {
@@ -39,6 +40,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
     private lateinit var txtProgress: TextView
     private lateinit var txtEta: TextView
     private lateinit var edtStart: EditText
+    private lateinit var txtRapidOv: TextView
     private lateinit var txtFeedOv: TextView
     private lateinit var txtSpinOv: TextView
     private lateinit var rv: RecyclerView
@@ -54,14 +56,19 @@ class FileFragment : Fragment(R.layout.frag_file) {
     private var pauseStart = 0L
     private var pausedDuration = 0L
     private var timerRunning = false
-    private var waitingOk = false
+    //private var waitingOk = false
 
     enum class RunMode { IDLE, RUNNING, PAUSED }
     private var runMode = RunMode.IDLE
 
     data class QueueItem(val cmd: String, val isFileLine: Boolean)
     private val sendQueue = ArrayDeque<QueueItem>()
-    private var lastSentItem: QueueItem? = null
+    //private var lastSentItem: QueueItem? = null
+    private val grblRxBuffer = 128
+    private var bytesInFlight = 0
+    private val inFlightQueue = ArrayDeque<Pair<Int, Boolean>>()
+    private var lastActiveLine = 0
+    private var wcsBeforeRun = "G54"
 
     private lateinit var btnSpindle: Button
     private lateinit var btnRun: Button
@@ -103,6 +110,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
         progressBar = view.findViewById(R.id.progressRun)
         txtProgress = view.findViewById(R.id.txtProgress)
         txtEta = view.findViewById(R.id.txtEta)
+        txtRapidOv = view.findViewById(R.id.txtRapidOv)
         txtFeedOv = view.findViewById(R.id.txtFeedOv)
         txtSpinOv = view.findViewById(R.id.txtSpinOv)
         edtStart = view.findViewById(R.id.edtStartLine)
@@ -225,6 +233,8 @@ class FileFragment : Fragment(R.layout.frag_file) {
                             "• Work Offset Benar\n\n" +
                             "• Lanjutkan ?")
                 .setPositiveButton("Ok") { _, _ ->
+                    val main = activity as? MainActivity ?: return@setPositiveButton
+                    wcsBeforeRun = main.currentWcs
                     Toast.makeText(requireContext(), "Start Streaming Gcode", Toast.LENGTH_SHORT).show()
                     startRun()
                 }
@@ -246,18 +256,21 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 runMode = RunMode.RUNNING
                 btnPause.text = "HOLD"
 
-                if (!waitingOk) {
+                /**if (!waitingOk) {
                     sendNext()
-                }
+                }**/
             }
         }
 
         btnStop.setOnClickListener {
             (activity as? MainActivity)?.btService?.sendRealtime(0x18.toByte())
+
             sendQueue.clear()
+            inFlightQueue.clear()
             runMode = RunMode.IDLE
+            bytesInFlight = 0
             timerRunning = false
-            
+
             (activity as? MainActivity)?.isStreaming = false
 
             current = lines.size
@@ -267,10 +280,10 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
             feedOv = 100
             (activity as? MainActivity)?.btService?.sendRealtime(0x90.toByte())
-            txtFeedOv.text = "100%"
+            txtFeedOv.text = "Feed : 100%"
             spinOv = 100
             (activity as? MainActivity)?.btService?.sendRealtime(0x99.toByte())
-            txtSpinOv.text = "100%"
+            txtSpinOv.text = "Spindle : 100%"
         }
 
         btnRunFromHere.setOnClickListener {
@@ -285,45 +298,60 @@ class FileFragment : Fragment(R.layout.frag_file) {
         view.findViewById<Button>(R.id.btnFeedMinus).setOnClickListener {
             if (feedOv > 10) {
                 feedOv -= 10
-                (activity as? MainActivity)?.btService?.sendRealtime(0x92.toByte()) // Feed -
-                txtFeedOv.text = "$feedOv%"
+                (activity as? MainActivity)?.btService?.sendRealtime(0x92.toByte())
+                txtFeedOv.text = "Feed : $feedOv%"
             }
         }
 
         view.findViewById<Button>(R.id.btnFeedPlus).setOnClickListener {
             if (feedOv < 200) {
                 feedOv += 10
-                (activity as? MainActivity)?.btService?.sendRealtime(0x91.toByte()) // Feed +
-                txtFeedOv.text = "$feedOv%"
+                (activity as? MainActivity)?.btService?.sendRealtime(0x91.toByte())
+                txtFeedOv.text = "Feed : $feedOv%"
             }
         }
 
         view.findViewById<Button>(R.id.btnFeedReset).setOnClickListener {
             feedOv = 100
-            (activity as? MainActivity)?.btService?.sendRealtime(0x90.toByte()) // Feed reset
-            txtFeedOv.text = "100%"
+            (activity as? MainActivity)?.btService?.sendRealtime(0x90.toByte())
+            txtFeedOv.text = "Feed : 100%"
+        }
+
+        view.findViewById<Button>(R.id.btnRapidLow).setOnClickListener {
+            (activity as? MainActivity)?.btService?.sendRealtime(0x97.toByte())
+            txtRapidOv.text = "Rapid : Low"
+        }
+
+        view.findViewById<Button>(R.id.btnRapidMedium).setOnClickListener {
+            (activity as? MainActivity)?.btService?.sendRealtime(0x96.toByte())
+            txtRapidOv.text = "Rapid : Medium"
+        }
+
+        view.findViewById<Button>(R.id.btnRapidReset).setOnClickListener {
+            (activity as? MainActivity)?.btService?.sendRealtime(0x95.toByte())
+            txtRapidOv.text = "Rapid : 100%"
         }
 
         view.findViewById<Button>(R.id.btnSpinMinus).setOnClickListener {
             if (spinOv > 10) {
                 spinOv -= 10
-                (activity as? MainActivity)?.btService?.sendRealtime(0x9B.toByte()) // Spindle -
-                txtSpinOv.text = "$spinOv%"
+                (activity as? MainActivity)?.btService?.sendRealtime(0x9B.toByte())
+                txtSpinOv.text = "Spindle : $spinOv%"
             }
         }
 
         view.findViewById<Button>(R.id.btnSpinPlus).setOnClickListener {
             if (spinOv < 200) {
                 spinOv += 10
-                (activity as? MainActivity)?.btService?.sendRealtime(0x9A.toByte()) // Spindle +
-                txtSpinOv.text = "$spinOv%"
+                (activity as? MainActivity)?.btService?.sendRealtime(0x9A.toByte())
+                txtSpinOv.text = "Spindle : $spinOv%"
             }
         }
 
         view.findViewById<Button>(R.id.btnSpinReset).setOnClickListener {
             spinOv = 100
-            (activity as? MainActivity)?.btService?.sendRealtime(0x99.toByte()) // Spindle reset
-            txtSpinOv.text = "100%"
+            (activity as? MainActivity)?.btService?.sendRealtime(0x99.toByte())
+            txtSpinOv.text = "Spindle : 100%"
         }
 
         btnSpindle.setOnClickListener {
@@ -376,7 +404,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
             }
         }
 
-        (activity as? MainActivity)?.btService?.onOkReceived = {
+        /**(activity as? MainActivity)?.btService?.onOkReceived = {
             activity?.runOnUiThread {
                 if (!waitingOk) return@runOnUiThread
                 waitingOk = false
@@ -391,6 +419,26 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 if (runMode == RunMode.RUNNING && !waitingOk) {
                     sendNext()
                 }
+            }
+        }**/
+        (activity as? MainActivity)?.btService?.onOkReceived = okLabel@{
+
+            if (inFlightQueue.isEmpty()) return@okLabel
+
+            val (finishedLen, wasFileLine) = inFlightQueue.removeFirst()
+            bytesInFlight -= finishedLen
+
+            if (wasFileLine) {
+                current++
+            }
+            if (current >= lines.size) {
+                requireActivity().runOnUiThread {
+                   stopRunFinished()
+                }
+                return@okLabel
+            }
+            if (runMode == RunMode.RUNNING) {
+                sendUntilBufferFull()
             }
         }
     }
@@ -418,7 +466,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
         rv.adapter = adapter
 
         current = 0
-        waitingOk = false
+        //waitingOk = false
         runMode = RunMode.IDLE
 
         timerRunning = false
@@ -439,9 +487,12 @@ class FileFragment : Fragment(R.layout.frag_file) {
         sendQueue.addAll(lines.map { QueueItem(it, true)})
 
         current = 0
-        waitingOk = false
+        //waitingOk = false
         runMode = RunMode.RUNNING
         dwellInjected = false
+
+        bytesInFlight = 0
+        inFlightQueue.clear()
 
         (activity as? MainActivity)?.isStreaming = true
 
@@ -455,35 +506,80 @@ class FileFragment : Fragment(R.layout.frag_file) {
         timerHandler.post(timerRunnable)
         edtStart.setText("1")
 
-        sendNext()
+        //sendNext()
+        sendUntilBufferFull()
     }
-
-    private fun sendNext() {
+    private fun sendUntilBufferFull() {
         if (runMode != RunMode.RUNNING) return
         if (currentState == GrblState.ALARM) return
-        if (waitingOk) return
+        //if (currentState == GrblState.HOLD) return
         if (sendQueue.isEmpty()) return
 
-        val item = sendQueue.removeFirst()
-        lastSentItem = item
+        val bt = (activity as? MainActivity)?.btService ?: return
 
-        val cmdUpper = item.cmd.trim().uppercase()
+        while (sendQueue.isNotEmpty()) {
 
-        (activity as? MainActivity)?.btService?.send(item.cmd + "\n")
-        waitingOk = true
+            val item = sendQueue.removeFirst()
+            //val item = sendQueue.first()
+            val cmdUpper = item.cmd.trim().uppercase()
 
-        // 🔴 Inject dwell SETELAH M3 / M4 (hanya sekali)
-        if (!dwellInjected &&
+            if (!dwellInjected &&
             spindleDelaySeconds > 0 &&
             item.isFileLine &&
             (cmdUpper.contains("M3") || cmdUpper.contains("M4"))
-        ) {
-
-            val dwellCmd = "G4 P$spindleDelaySeconds"
-            sendQueue.addFirst(QueueItem(dwellCmd, false))
+            ) {
             dwellInjected = true
+
+            // Kirim M3 dulu
+            sendQueue.addFirst( QueueItem("G4 P$spindleDelaySeconds", false) )
+            }
+
+            val cmd2 = item.cmd.trim() + "\n"
+            val len = cmd2.toByteArray(Charsets.US_ASCII).size
+
+            // Kalau buffer hampir penuh → berhenti kirim
+            if (bytesInFlight + len >= grblRxBuffer - 4) {
+                sendQueue.addFirst(item) // kembalikan
+                break
+            }
+
+            //sendQueue.removeFirst()
+            bt.send(cmd2)
+
+            bytesInFlight += len
+            inFlightQueue.addLast(len to item.isFileLine)
+
+            //if (item.isFileLine) {
+            // current increment tetap saat OK
+            //}
         }
     }
+    /**private fun sendNext() {
+    if (runMode != RunMode.RUNNING) return
+    if (currentState == GrblState.ALARM) return
+    if (waitingOk) return
+    if (sendQueue.isEmpty()) return
+
+    val item = sendQueue.removeFirst()
+    lastSentItem = item
+
+    val cmdUpper = item.cmd.trim().uppercase()
+
+    (activity as? MainActivity)?.btService?.send(item.cmd + "\n")
+    waitingOk = true
+
+    // 🔴 Inject dwell SETELAH M3 / M4 (hanya sekali)
+    if (!dwellInjected &&
+    spindleDelaySeconds > 0 &&
+    item.isFileLine &&
+    (cmdUpper.contains("M3") || cmdUpper.contains("M4"))
+    ) {
+
+    val dwellCmd = "G4 P$spindleDelaySeconds"
+    sendQueue.addFirst(QueueItem(dwellCmd, false))
+    dwellInjected = true
+    }
+    }**/
 
     @SuppressLint("SetTextI18n")
     private fun runFromHere(index: Int) {
@@ -497,11 +593,12 @@ class FileFragment : Fragment(R.layout.frag_file) {
         }
 
         runMode = RunMode.IDLE
-        waitingOk = false
-        bt.sendRealtime(0x18.toByte())
+        //bt.sendRealtime(0x18.toByte())
 
         Handler(Looper.getMainLooper()).postDelayed({
             sendQueue.clear()
+            bytesInFlight = 0
+            inFlightQueue.clear()
             dwellInjected = false
             sendQueue.addAll(buildRunFromHereHeader(st).map{ QueueItem(it,false)})
             sendQueue.addAll(lines.subList(index, lines.size).map{ QueueItem(it,true)})
@@ -518,7 +615,8 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
             edtStart.setText(current.toString())
 
-            sendNext()
+            //sendNext()
+            sendUntilBufferFull()
         }, 400)
     }
 
@@ -553,7 +651,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
         var absolute: Boolean = true,
         var unitMm: Boolean = true,
-        var wcs: String = "G54",
+        //var wcs: String = "G54",
 
         var spindleOn: Boolean = false,
         var spindleDir: String? = null,
@@ -573,9 +671,9 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
             if (l.contains("G90")) st.absolute = true
             if (l.contains("G91")) st.absolute = false
-            if (l.contains("G21")) st.unitMm = true
-            if (l.contains("G20")) st.unitMm = false
-            Regex("G5[4-9]").find(l)?.let { st.wcs = it.value }
+            //if (l.contains("G21")) st.unitMm = true
+            //if (l.contains("G20")) st.unitMm = false
+            //Regex("G5[4-9]").find(l)?.let { st.wcs = it.value }
             Regex("G1.*Z[-0-9.]+.*F([0-9.]+)").find(l)?.let {
                 st.feedZ = it.groupValues[1].toDouble()
             }
@@ -604,10 +702,11 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
     fun buildRunFromHereHeader(st: GcodeState): List<String> {
         val h = mutableListOf<String>()
-        h += if (st.unitMm) "G21" else "G20"
+        //h += if (st.unitMm) "G21" else "G20"
+        //h += st.wcs
         h += "G90"
-        h += st.wcs
         h += "G53 G0 Z0"
+        h += "G17"
 
         if (st.x != null && st.y != null)
             h += "G90 G0 X${st.x} Y${st.y}"
@@ -640,6 +739,8 @@ class FileFragment : Fragment(R.layout.frag_file) {
                         "Lanjutkan?"
             )
             .setPositiveButton("RUN") { _, _ ->
+                val main = activity as? MainActivity ?: return@setPositiveButton
+                wcsBeforeRun = main.currentWcs
                 Toast.makeText(requireContext(), "Start Streaming Gcode", Toast.LENGTH_SHORT).show()
                 runFromHere(index)
             }
@@ -649,22 +750,23 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
     @SuppressLint("SetTextI18n")
     private fun stopRunFinished() {
+        val bt = (activity as? MainActivity)?.btService ?: return
         runMode = RunMode.IDLE
         timerRunning = false
-        waitingOk = false
         timerHandler.removeCallbacks(timerRunnable)
 
         (activity as? MainActivity)?.isStreaming = false
+        bt.send("$wcsBeforeRun\n")
 
         progressBar.progress = 0
         txtProgress.text = "0 %"
 
         feedOv = 100
-        (activity as? MainActivity)?.btService?.sendRealtime(0x90.toByte())
-        txtFeedOv.text = "100%"
+        bt.sendRealtime(0x90.toByte())
+        txtFeedOv.text = "Feed : 100%"
         spinOv = 100
-        (activity as? MainActivity)?.btService?.sendRealtime(0x99.toByte())
-        txtSpinOv.text = "100%"
+        bt.sendRealtime(0x99.toByte())
+        txtSpinOv.text = "Spindle : 100%"
     }
 
     @SuppressLint("SetTextI18n")
@@ -673,10 +775,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
         if (runMode == RunMode.IDLE) return
 
         runMode = RunMode.IDLE
-        waitingOk = false
         sendQueue.clear()
-        lastSentItem = null
-
         timerRunning = false
         timerHandler.removeCallbacks(timerRunnable)
 
@@ -699,21 +798,51 @@ class FileFragment : Fragment(R.layout.frag_file) {
         if (currentState != GrblState.RUN) return
 
         val usedPlanner = totalPlanner - lastPlannerAvailable
-        val activeLine = ( current - usedPlanner)
+        val calculated = current - usedPlanner
+        val activeLine = calculated
+            .coerceIn(lastActiveLine, current)
             .coerceIn(0, lines.size - 1)
+
         if (adapter.activeLine == activeLine) return
+
+        val prefs = requireContext()
+            .getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
+
+        val autoScroll = prefs.getBoolean("auto_scroll", true)
+        val showProgress = prefs.getBoolean("show_progress", true)
 
         adapter.activeLine = activeLine
         adapter.notifyDataSetChanged()
-        rv.scrollToPosition(activeLine)
+        //rv.scrollToPosition(activeLine)
+        if (autoScroll) {
+            rv.scrollToPosition(activeLine)
+        }
         edtStart.setText((activeLine + 1).toString())
 
         val percent = (((activeLine + 1).toFloat() / lines.size) * 100).toInt()
-        progressBar.progress = percent
+        //progressBar.progress = percent
+        if (showProgress) {
+            progressBar.progress = percent
+        }
         txtProgress.text = "$percent %"
         updateServiceProgress(percent)
     }
 
+    /**Agar progressBar langsung hide saat OFF:
+    override fun onResume() {
+        super.onResume()
+
+        val prefs = requireContext()
+            .getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
+
+        val showProgress = prefs.getBoolean("show_progress", true)
+
+        progressBar.visibility =
+            if (showProgress) View.VISIBLE else View.GONE
+
+        txtProgress.visibility =
+            if (showProgress) View.VISIBLE else View.GONE
+    }**/
     private fun updateServiceProgress(progress: Int) {
         val intent = Intent(requireContext(), StreamKeepAliveService::class.java).apply {
             action = StreamKeepAliveService.ACTION_UPDATE_PROGRESS
@@ -727,63 +856,73 @@ class FileFragment : Fragment(R.layout.frag_file) {
         when (currentState) {
             GrblState.IDLE -> {
                 btnRun.isEnabled = true
+                btnRun.alpha = 1f
                 btnSpindle.isEnabled = true
+                btnSpindle.alpha = 1f
                 btnRunFromHere.isEnabled = true
+                btnRunFromHere.alpha = 1f
                 btnOpen.isEnabled = true
+                btnOpen.alpha = 1f
                 btnPause.isEnabled = false
+                btnPause.alpha = 0.4f
                 btnStop.isEnabled = false
-                btnRun.setTextColor(Color.GREEN)
-                btnRunFromHere.setTextColor(Color.GREEN)
-                btnPause.setTextColor(Color.GRAY)
-                btnStop.setTextColor(Color.GRAY)
-                btnOpen.setTextColor(Color.GREEN)
+                btnStop.alpha = 0.4f
             }
             GrblState.RUN -> {
                 btnRun.isEnabled = false
+                btnRun.alpha = 0.4f
                 btnSpindle.isEnabled = false
+                btnSpindle.alpha = 0.4f
                 btnRunFromHere.isEnabled = false
+                btnRunFromHere.alpha = 0.4f
                 btnOpen.isEnabled = false
+                btnOpen.alpha = 0.4f
                 btnPause.isEnabled = true
+                btnPause.alpha = 1f
                 btnStop.isEnabled = true
-                btnRun.setTextColor(Color.GRAY)
-                btnRunFromHere.setTextColor(Color.GRAY)
-                btnPause.setTextColor(Color.YELLOW)
-                btnStop.setTextColor(Color.RED)
-                btnOpen.setTextColor(Color.GRAY)
+                btnStop.alpha = 1f
             }
             GrblState.ALARM -> {
                 btnRun.isEnabled = false
+                btnRun.alpha = 0.4f
                 btnSpindle.isEnabled = false
+                btnSpindle.alpha = 0.4f
                 btnRunFromHere.isEnabled = false
+                btnRunFromHere.alpha = 0.4f
                 btnOpen.isEnabled = false
+                btnOpen.alpha = 0.4f
                 btnPause.isEnabled = false
+                btnPause.alpha = 0.4f
                 btnStop.isEnabled = false
-                btnRun.setTextColor(Color.GRAY)
-                btnRunFromHere.setTextColor(Color.GRAY)
-                btnPause.setTextColor(Color.GRAY)
-                btnStop.setTextColor(Color.GRAY)
-                btnOpen.setTextColor(Color.GRAY)
+                btnStop.alpha = 0.4f
             }
             GrblState.HOLD -> {
                 btnRun.isEnabled = false
+                btnRun.alpha = 0.4f
                 btnSpindle.isEnabled = true
+                btnSpindle.alpha = 1f
                 btnRunFromHere.isEnabled = false
+                btnRunFromHere.alpha = 0.4f
                 btnOpen.isEnabled = false
+                btnOpen.alpha = 0.4f
                 btnPause.isEnabled = true
+                btnPause.alpha = 1f
                 btnStop.isEnabled = true
-                btnRun.setTextColor(Color.GRAY)
-                btnRunFromHere.setTextColor(Color.GRAY)
-                btnPause.setTextColor(Color.YELLOW)
-                btnStop.setTextColor(Color.RED)
-                btnOpen.setTextColor(Color.GRAY)
+                btnStop.alpha = 1f
             }
             else -> {
-                btnRun.setTextColor(Color.GRAY)
-                btnRunFromHere.setTextColor(Color.GRAY)
-                btnPause.setTextColor(Color.GRAY)
-                btnStop.setTextColor(Color.GRAY)
-                btnOpen.setTextColor(Color.GRAY)
-
+                btnRun.isEnabled = false
+                btnRun.alpha = 0.4f
+                btnSpindle.isEnabled = false
+                btnSpindle.alpha = 0.4f
+                btnRunFromHere.isEnabled = false
+                btnRunFromHere.alpha = 0.4f
+                btnOpen.isEnabled = false
+                btnOpen.alpha = 0.4f
+                btnPause.isEnabled = false
+                btnPause.alpha = 0.4f
+                btnStop.isEnabled = false
+                btnStop.alpha = 0.4f
             }
         }
     }

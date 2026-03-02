@@ -25,7 +25,7 @@ class JogFragment : Fragment(R.layout.frag_jog) {
 
     private var isHolding = false
     private var downTime = 0L
-    private val tapThreshold = 200L   // ms
+    private val tapThreshold = 500L   // ms
     private val continuousInterval = 120L
     private var jogHandler = Handler(Looper.getMainLooper())
     private var jogRunnable: Runnable? = null
@@ -52,6 +52,8 @@ class JogFragment : Fragment(R.layout.frag_jog) {
     private lateinit var g55: Button
     private lateinit var g56: Button
     private lateinit var g57: Button
+    private lateinit var g58: Button
+    private lateinit var g59: Button
     private lateinit var btnProbe: Button
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -74,6 +76,8 @@ class JogFragment : Fragment(R.layout.frag_jog) {
         g55 = view.findViewById(R.id.g55)
         g56 = view.findViewById(R.id.g56)
         g57 = view.findViewById(R.id.g57)
+        g58 = view.findViewById(R.id.g58)
+        g59 = view.findViewById(R.id.g59)
         btnProbe = view.findViewById(R.id.btnProbe)
 
         viewModel.grblRunMode.observe(viewLifecycleOwner) { state ->
@@ -99,6 +103,8 @@ class JogFragment : Fragment(R.layout.frag_jog) {
             g55.isEnabled = idleOnly
             g56.isEnabled = idleOnly
             g57.isEnabled = idleOnly
+            g58.isEnabled = idleOnly
+            g59.isEnabled = idleOnly
             btnProbe.isEnabled = idleOnly
 
             val alpha = if (idleOnly) 1f else 0.4f
@@ -112,6 +118,8 @@ class JogFragment : Fragment(R.layout.frag_jog) {
             g55.alpha = alpha
             g56.alpha = alpha
             g57.alpha = alpha
+            g58.alpha = alpha
+            g59.alpha = alpha
             btnProbe.alpha = alpha
         }
 
@@ -202,6 +210,14 @@ class JogFragment : Fragment(R.layout.frag_jog) {
         }
         g57.setOnClickListener {
             sendCommand("G57\n")
+            sendCommand("\$G\n")
+        }
+        g58.setOnClickListener {
+            sendCommand("G58\n")
+            sendCommand("\$G\n")
+        }
+        g59.setOnClickListener {
+            sendCommand("G59\n")
             sendCommand("\$G\n")
         }
         btnProbe.setOnClickListener {

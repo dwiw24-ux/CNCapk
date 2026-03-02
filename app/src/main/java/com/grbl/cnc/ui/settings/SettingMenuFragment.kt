@@ -1,5 +1,6 @@
 package com.grbl.cnc.ui.settings
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
 import android.view.View
@@ -50,6 +51,18 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
                 "Status Polling Interval",
                 "Interval: ${prefs.getInt("polling_interval", 100)} ms",
                 "polling"
+            ),
+            SettingItem(
+                R.drawable.ic_settings_applications_black_24dp,
+                "Auto Scroll Gcode",
+                "Status: ${if (prefs.getBoolean("auto_scroll", true)) "ON" else "OFF"}",
+                "autoScroll"
+            ),
+            SettingItem(
+                R.drawable.ic_settings_applications_black_24dp,
+                "Show Progress",
+                "Status: ${if (prefs.getBoolean("show_progress", true)) "ON" else "OFF"}",
+                "showProgress"
             )
         )
 
@@ -76,6 +89,18 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
                 "polling" -> {
                     showPollingDialog()
                 }
+                "autoScroll" -> {
+                    toggleBooleanDialog(
+                        title = "Auto Scroll Gcode",
+                        key = "auto_scroll"
+                    )
+                }
+                "showProgress" -> {
+                    toggleBooleanDialog(
+                        title = "Show Progress Bar",
+                        key = "show_progress"
+                    )
+                }
             }
         }
 
@@ -87,6 +112,7 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
         )
     }
 
+    @SuppressLint("UseKtx")
     private fun showPollingDialog() {
         val prefs = requireContext()
             .getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
@@ -115,6 +141,7 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
             .setNegativeButton("Cancel", null)
             .show()
     }
+    @SuppressLint("UseKtx")
     private fun spindleDelayDialog() {
 
         val prefs = requireContext()
@@ -146,6 +173,7 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
 
     }
 
+    @SuppressLint("UseKtx")
     private fun appNameDialog() {
         val prefs = requireContext()
             .getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
@@ -170,6 +198,32 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
                 dialog.dismiss()
 
                 // Refresh fragment supaya deskripsi update
+                parentFragmentManager.beginTransaction()
+                    .replace(R.id.settingContainer, SettingMenuFragment())
+                    .commit()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    @SuppressLint("UseKtx")
+    private fun toggleBooleanDialog(title: String, key: String) {
+        val prefs = requireContext()
+            .getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
+
+        val current = prefs.getBoolean(key, true)
+        val options = arrayOf("ON", "OFF")
+        val selectedIndex = if (current) 0 else 1
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(title)
+            .setSingleChoiceItems(options, selectedIndex) { dialog, which ->
+                prefs.edit()
+                    .putBoolean(key, which == 0)
+                    .apply()
+
+                dialog.dismiss()
+
                 parentFragmentManager.beginTransaction()
                     .replace(R.id.settingContainer, SettingMenuFragment())
                     .commit()

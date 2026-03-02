@@ -72,6 +72,12 @@ class MainActivity : AppCompatActivity() {
     lateinit var btService: BluetoothService
     lateinit var consoleFragment: ConsoleFragment
     private var keepAliveRunning = false
+    var currentWcs: String = "G54"
+        private set
+        /**set(value) {
+            field = value
+            txtWcs.text = value
+        }**/
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -103,11 +109,9 @@ class MainActivity : AppCompatActivity() {
         txtmposX = findViewById(R.id.txtmposX)
         txtmposY = findViewById(R.id.txtmposY)
         txtmposZ = findViewById(R.id.txtmposZ)
-
         txtwposX = findViewById(R.id.txtwposX)
         txtwposY = findViewById(R.id.txtwposY)
         txtwposZ = findViewById(R.id.txtwposZ)
-
         txtFeed = findViewById(R.id.txtFeed)
         txtSpindle = findViewById(R.id.txtSpindle)
 
@@ -156,7 +160,7 @@ class MainActivity : AppCompatActivity() {
 
         btService.onConnected = {
             runOnUiThread {
-                txtStatus.text = "BT Connected"
+                txtStatus.text = "Connected ${btService.connectedDeviceName}"
                 pendingGrblConnect = true
                 Toast.makeText(this, "Bluetooth Connected", Toast.LENGTH_SHORT).show()
             }
@@ -173,7 +177,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         btService.onStatus = { status ->
-
             runOnUiThread {
                 updateStatusUI(status)
                 viewModel.updateStatus(status)
@@ -212,7 +215,6 @@ class MainActivity : AppCompatActivity() {
         btnMenu.setOnClickListener{ view ->
             val popupMenu = PopupMenu(this, view)
             popupMenu.menuInflater.inflate(R.menu.menu_main, popupMenu.menu)
-
             popupMenu.setOnMenuItemClickListener{ item ->
                 when (item.itemId) {
                     R.id.settings -> {
@@ -302,7 +304,6 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
         if (requestCode == 1001 &&
             grantResults.isNotEmpty() &&
             grantResults[0] == PackageManager.PERMISSION_GRANTED
@@ -312,7 +313,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateStatusUI(s: GrblStatus) {
-
         txtStatusGrbl.text = "${s.state}"
         txtStatusGrbl.setTextColor(
             when (s.state) {
@@ -337,9 +337,7 @@ class MainActivity : AppCompatActivity() {
         txtFeed.text = String.format(Locale.US, "Feed: %d", s.feed)
         txtSpindle.text = String.format(Locale.US, "Spin: %d", s.spindle)
 
-        // === LIMIT SWITCH ===
         updateLimitUI(s.pin)
-
     }
 
     private fun updateLimitUI(pin: String?) {
@@ -363,11 +361,9 @@ class MainActivity : AppCompatActivity() {
 
     private val statusRunnable = object : Runnable {
         override fun run() {
-
             if (btService.isConnected) {
                 btService.send("?")
             }
-
             val interval = if (isStreaming) {
                 150L
             } else {
@@ -384,13 +380,11 @@ class MainActivity : AppCompatActivity() {
 
     private val preferenceListener =
         SharedPreferences.OnSharedPreferenceChangeListener { sharedPreferences, key ->
-
             when (key) {
                 "polling_interval" -> {
                     handler.removeCallbacks(statusRunnable)
                     handler.post(statusRunnable)
                 }
-
                 "app_name" -> {
                     val appName = sharedPreferences.getString("app_name", "GRBL Bluetooth")
                     txtAppName.text = appName
@@ -401,13 +395,9 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         val prefs = getSharedPreferences("cnc_settings", MODE_PRIVATE)
-
         val appName = prefs.getString("app_name", "GRBL Bluetooth")
-
         txtAppName.text = appName
-
         prefs.registerOnSharedPreferenceChangeListener(preferenceListener)
-
         if (btService.isConnected) {
             handler.post(statusRunnable)
         }
@@ -417,7 +407,6 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
         getSharedPreferences("cnc_settings", MODE_PRIVATE)
             .unregisterOnSharedPreferenceChangeListener(preferenceListener)
-
         handler.removeCallbacks(statusRunnable)
     }
 
@@ -434,24 +423,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun handleGrblLine(line: String) {
-        if (!line.startsWith("[G")) return
-
-        val wcs = when {
+        if (!line.startsWith("[GC:")) return
+        currentWcs = when {
             line.contains("G54") -> "G54"
             line.contains("G55") -> "G55"
             line.contains("G56") -> "G56"
             line.contains("G57") -> "G57"
             line.contains("G58") -> "G58"
             line.contains("G59") -> "G59"
-            else -> "-"
+            else -> currentWcs
         }
-        txtWcs.text = wcs
+        txtWcs.text = currentWcs
     }
 
     @SuppressLint("SetTextI18n")
     fun showWPosDialog(axis: Char) {
         val view = layoutInflater.inflate(R.layout.dialog_set_wpos, null)
-
         val dialog = AlertDialog.Builder(this)
             .setView(view)
             .setCancelable(false)
@@ -463,20 +450,17 @@ class MainActivity : AppCompatActivity() {
         val btnCancel = view.findViewById<Button>(R.id.btnCancel) ?: return
 
         txtAxis.text = "Set WPos $axis"
-
         btnSet.setOnClickListener {
             if (!btService.isConnected) {
                 Toast.makeText(this, "Bluetooth not connected", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-
             val value = edtValue.text.toString().trim()
             if (value.isEmpty()) return@setOnClickListener
 
             btService.send("G10 L20 P0 $axis $value\n")
             dialog.dismiss()
         }
-
         btnCancel.setOnClickListener {
             dialog.dismiss()
         }

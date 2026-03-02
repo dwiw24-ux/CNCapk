@@ -162,7 +162,7 @@ class BluetoothService(private val context: Context) {
         rawListeners.remove(cb)
     }
 
-    private fun processRx(chunk: String) {
+    /**private fun processRx(chunk: String) {
         rxBuffer += chunk
 
         while (true) {
@@ -188,5 +188,5 @@ class BluetoothService(private val context: Context) {
                 }
             }
         }
-    }
+    }**/
 }
