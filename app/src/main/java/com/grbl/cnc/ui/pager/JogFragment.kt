@@ -26,7 +26,7 @@ class JogFragment : Fragment(R.layout.frag_jog) {
     private var isHolding = false
     private var downTime = 0L
     private val tapThreshold = 500L   // ms
-    private val continuousInterval = 120L
+    private val continuousInterval = 100L
     private var jogHandler = Handler(Looper.getMainLooper())
     private var jogRunnable: Runnable? = null
     private var step = 5.0
@@ -125,6 +125,7 @@ class JogFragment : Fragment(R.layout.frag_jog) {
 
         seekStep.progress = 50 // default
         seekStep.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            @SuppressLint("SetTextI18n")
             override fun onProgressChanged(sb: SeekBar, p: Int, fromUser: Boolean) {
                 step = when {
                     p < 5 -> 0.1
@@ -252,14 +253,25 @@ class JogFragment : Fragment(R.layout.frag_jog) {
         }
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        jogRunnable?.let {
+            jogHandler.removeCallbacks(it)
+        }
+    }
+
     private fun sendCommand(cmd: String) {
         val blu = (activity as? MainActivity)?.btService ?: return
         blu.send(cmd)
     }
 
-    private fun sendJog(axis: String, dir: Int) {
+    private fun sendJog(axis: String, dir: Int, isContinous: Boolean = false) {
         (activity as? MainActivity)?.isJogging = true
-        val distance = step * dir
+        val distance = if (isContinous) {
+            0.5 * dir
+        } else {
+            step * dir
+        }
         val cmd = "\$J=G91 G21 $axis$distance F$feed\n"
         (activity as? MainActivity)?.btService?.send(cmd)
     }
@@ -295,7 +307,7 @@ class JogFragment : Fragment(R.layout.frag_jog) {
                     jogRunnable = Runnable {
                         isHolding = true
 
-                        sendJog(axis, dir)
+                        sendJog(axis, dir, true)
                         jogHandler.postDelayed(jogRunnable!!, continuousInterval)
                     }
                     jogHandler.postDelayed(jogRunnable!!, tapThreshold)
@@ -303,14 +315,15 @@ class JogFragment : Fragment(R.layout.frag_jog) {
 
                 MotionEvent.ACTION_UP,
                 MotionEvent.ACTION_CANCEL -> {
-                    jogHandler.removeCallbacks(jogRunnable!!)
-
+                    //jogHandler.removeCallbacks(jogRunnable!!)
+                    jogRunnable?.let { jogHandler.removeCallbacks(it) }
                     val elapsed = System.currentTimeMillis() - downTime
 
                     if (!isHolding && elapsed < tapThreshold) {
-                        sendJog(axis, dir)
+                        sendJog(axis, dir, false)
+                    } else {
+                        stopJog()
                     }
-                    stopJog()
                     v.performClick()
                 }
             }

@@ -335,7 +335,7 @@ class MainActivity : AppCompatActivity() {
         txtwposZ.text = String.format(Locale.US, " %.3f ✎", s.wposZ)
 
         txtFeed.text = String.format(Locale.US, "Feed: %d", s.feed)
-        txtSpindle.text = String.format(Locale.US, "Spin: %d", s.spindle)
+        txtSpindle.text = String.format(Locale.US, "Spindle: %d", s.spindle)
 
         updateLimitUI(s.pin)
     }

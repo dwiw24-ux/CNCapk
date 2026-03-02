@@ -2,6 +2,7 @@
 <androidx.cardview.widget.CardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
@@ -23,6 +24,7 @@
             <TextView
                 android:id="@+id/txtStatusGrbl"
                 android:text="Unknown"
+                android:textSize="14sp"
                 android:layout_weight="1"
                 android:textStyle="bold"
                 android:padding="0dp"
@@ -31,6 +33,7 @@
 
             <TextView
                 android:text="MPos"
+                android:textSize="14sp"
                 android:textStyle="bold"
                 android:textColor="#00E676"
                 android:layout_weight="1"
@@ -41,6 +44,7 @@
 
             <TextView
                 android:text="WPos"
+                android:textSize="14sp"
                 android:textStyle="bold"
                 android:textColor="#00E676"
                 android:layout_weight="1"
@@ -57,6 +61,7 @@
             <TextView
                 android:id="@+id/txtLimX"
                 android:text="X"
+                android:textSize="14sp"
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:textStyle="bold"
@@ -65,6 +70,7 @@
             <TextView
                 android:id="@+id/txtmposX"
                 android:text="0.000"
+                android:textSize="16sp"
                 android:gravity="center"
                 android:layout_width="0dp"
                 android:layout_weight="1"
@@ -73,6 +79,7 @@
             <TextView
                 android:id="@+id/txtwposX"
                 android:text="0.000 ✎"
+                android:textSize="16sp"
                 android:gravity="end"
                 android:layout_width="0dp"
                 android:layout_weight="1"
@@ -87,6 +94,7 @@
             <TextView
                 android:id="@+id/txtLimY"
                 android:text="Y"
+                android:textSize="14sp"
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:textStyle="bold"
@@ -95,6 +103,7 @@
             <TextView
                 android:id="@+id/txtmposY"
                 android:text="0.000"
+                android:textSize="16sp"
                 android:gravity="center"
                 android:layout_width="0dp"
                 android:layout_weight="1"
@@ -102,13 +111,15 @@
 
             <TextView
                 android:id="@+id/txtwposY"
-                android:text="0.000 ✎"
-                android:gravity="end"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:clickable="true"
                 android:focusable="true"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"/>
+                android:gravity="end"
+                android:text="0.000 ✎"
+                android:textSize="16sp"
+                tools:ignore="TouchTargetSizeCheck" />
 
         </LinearLayout>
 
@@ -119,6 +130,7 @@
             <TextView
                 android:id="@+id/txtLimZ"
                 android:text="Z"
+                android:textSize="14sp"
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:textStyle="bold"
@@ -127,6 +139,7 @@
             <TextView
                 android:id="@+id/txtmposZ"
                 android:text="0.000"
+                android:textSize="16sp"
                 android:gravity="center"
                 android:layout_width="0dp"
                 android:layout_weight="1"
@@ -134,13 +147,15 @@
 
             <TextView
                 android:id="@+id/txtwposZ"
-                android:text="0.000 ✎"
-                android:gravity="end"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:clickable="true"
                 android:focusable="true"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"/>
+                android:gravity="end"
+                android:text="0.000 ✎"
+                android:textSize="16sp"
+                tools:ignore="TouchTargetSizeCheck" />
 
         </LinearLayout>
 
@@ -150,7 +165,8 @@
 
             <TextView
                 android:id="@+id/txtWcs"
-                android:text="G54"
+                android:text="-"
+                android:textSize="14sp"
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:textStyle="bold"
@@ -159,6 +175,7 @@
             <TextView
                 android:id="@+id/txtFeed"
                 android:text="Feed: 0"
+                android:textSize="14sp"
                 android:gravity="center"
                 android:layout_width="0dp"
                 android:layout_weight="1"
@@ -166,7 +183,8 @@
 
             <TextView
                 android:id="@+id/txtSpindle"
-                android:text="Spin: 0"
+                android:text="Spindle: 0"
+                android:textSize="14sp"
                 android:gravity="end"
                 android:layout_width="0dp"
                 android:layout_weight="1"

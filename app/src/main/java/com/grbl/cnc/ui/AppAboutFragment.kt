@@ -10,10 +10,14 @@ class AppAboutFragment : PreferenceFragmentCompat() {
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.activity_about, rootKey)
 
-        val version = requireActivity()
-            .packageManager
-            .getPackageInfo(requireActivity().packageName, 0)
-            .versionName
+        val version = try {
+            requireContext()
+                .packageManager
+                .getPackageInfo(requireContext().packageName, 0)
+                .versionName
+        } catch (e: Exception) {
+            "Unknown"
+        }
 
         findPreference<Preference>("pref_app_version")
             ?.summary = version

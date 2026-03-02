@@ -329,7 +329,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
         view.findViewById<Button>(R.id.btnRapidReset).setOnClickListener {
             (activity as? MainActivity)?.btService?.sendRealtime(0x95.toByte())
-            txtRapidOv.text = "Rapid : 100%"
+            txtRapidOv.text = "Rapid : Normal"
         }
 
         view.findViewById<Button>(R.id.btnSpinMinus).setOnClickListener {
@@ -512,7 +512,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
     private fun sendUntilBufferFull() {
         if (runMode != RunMode.RUNNING) return
         if (currentState == GrblState.ALARM) return
-        //if (currentState == GrblState.HOLD) return
         if (sendQueue.isEmpty()) return
 
         val bt = (activity as? MainActivity)?.btService ?: return
@@ -530,14 +529,12 @@ class FileFragment : Fragment(R.layout.frag_file) {
             ) {
             dwellInjected = true
 
-            // Kirim M3 dulu
             sendQueue.addFirst( QueueItem("G4 P$spindleDelaySeconds", false) )
             }
 
             val cmd2 = item.cmd.trim() + "\n"
             val len = cmd2.toByteArray(Charsets.US_ASCII).size
 
-            // Kalau buffer hampir penuh → berhenti kirim
             if (bytesInFlight + len >= grblRxBuffer - 4) {
                 sendQueue.addFirst(item) // kembalikan
                 break
@@ -548,10 +545,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
             bytesInFlight += len
             inFlightQueue.addLast(len to item.isFileLine)
-
-            //if (item.isFileLine) {
-            // current increment tetap saat OK
-            //}
         }
     }
     /**private fun sendNext() {
@@ -865,8 +858,8 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 btnOpen.alpha = 1f
                 btnPause.isEnabled = false
                 btnPause.alpha = 0.4f
-                btnStop.isEnabled = false
-                btnStop.alpha = 0.4f
+                btnStop.isEnabled = true
+                btnStop.alpha = 1f
             }
             GrblState.RUN -> {
                 btnRun.isEnabled = false
