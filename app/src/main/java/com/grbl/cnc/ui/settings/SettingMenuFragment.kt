@@ -3,6 +3,7 @@ package com.grbl.cnc.ui.settings
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
+import android.text.InputType
 import android.view.View
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
@@ -42,9 +43,21 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
             ),
             SettingItem(
                 R.drawable.ic_settings_applications_black_24dp,
+                "Safe Z",
+                "Current Safe Z distance : ${prefs.getFloat("safe_z", 10f)} mm",
+                "safe_z"
+            ),
+            SettingItem(
+                R.drawable.ic_settings_applications_black_24dp,
                 "Spindle Start Delay",
                 "Delay: ${prefs.getInt("spindle_delay", 2)} sec",
                 "spindle"
+            ),
+            SettingItem(
+                R.drawable.ic_settings_applications_black_24dp,
+                "Rx Safe",
+                "Current : ${prefs.getInt("rx_safe", 4)} byte",
+                "rx_safe"
             ),
             SettingItem(
                 R.drawable.ic_settings_applications_black_24dp,
@@ -83,8 +96,14 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
                         .addToBackStack(null)
                         .commit()
                 }
+                "safe_z" -> {
+                    safeZDialog()
+                }
                 "spindle" -> {
                     spindleDelayDialog()
+                }
+                "rx_safe" -> {
+                    rxSafeDialog()
                 }
                 "polling" -> {
                     showPollingDialog()
@@ -172,6 +191,38 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
             .show()
 
     }
+    @SuppressLint("UseKtx")
+    private fun rxSafeDialog() {
+
+        val prefs = requireContext()
+            .getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
+
+        val options = arrayOf("0 byte", "1 byte", "2 byte", "3 byte", "4 byte",
+            "5 byte", "6 byte", "7 byte", "8 byte")
+        val values = arrayOf(0, 1, 2, 3, 4, 5, 6, 7, 8)
+
+        val current = prefs.getInt("rx_safe", 4)
+        val selectedIndex = values.indexOf(current).coerceAtLeast(0)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Select Byte Rx Safe")
+            .setSingleChoiceItems(options, selectedIndex) { dialog, which ->
+
+                prefs.edit()
+                    .putInt("rx_safe", values[which])
+                    .apply()
+
+                dialog.dismiss()
+
+                // Refresh fragment supaya deskripsi update
+                parentFragmentManager.beginTransaction()
+                    .replace(R.id.settingContainer, SettingMenuFragment())
+                    .commit()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+
+    }
 
     @SuppressLint("UseKtx")
     private fun appNameDialog() {
@@ -222,6 +273,40 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
                     .putBoolean(key, which == 0)
                     .apply()
 
+                dialog.dismiss()
+
+                parentFragmentManager.beginTransaction()
+                    .replace(R.id.settingContainer, SettingMenuFragment())
+                    .commit()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    @SuppressLint("UseKtx")
+    private fun safeZDialog() {
+        val prefs = requireContext()
+            .getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
+
+        val editText = EditText(requireContext())
+        editText.inputType =
+            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+
+        val currentValue = prefs.getFloat("safe_z", 10f)
+
+        editText.setText(currentValue.toString())
+        editText.setSelection(editText.text.length)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Safe Z")
+            .setView(editText)
+            .setPositiveButton("Save") { dialog, _ ->
+                val value = editText.text.toString().toFloatOrNull()
+                if (value != null) {
+                    prefs.edit()
+                        .putFloat("safe_z", value)
+                        .apply()
+                }
                 dialog.dismiss()
 
                 parentFragmentManager.beginTransaction()

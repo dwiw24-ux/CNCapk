@@ -58,7 +58,7 @@
             tools:ignore="DiscouragedApi,LockedOrientationActivity,NonResizeableActivity" />
 
         <activity
-            android:name=".ui.NotificationsActivity"
+            android:name=".ui.GcodeActivity"
             android:screenOrientation="portrait"
             android:resizeableActivity="false"
             android:windowSoftInputMode="adjustPan"

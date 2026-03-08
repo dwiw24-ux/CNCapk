@@ -22,6 +22,7 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
@@ -36,7 +37,6 @@ import com.grbl.cnc.ui.pager.ConsoleFragment
 import java.util.Locale
 import androidx.activity.viewModels
 import com.grbl.cnc.ui.pager.MainViewModel
-import android.util.Log
 import com.grbl.cnc.grbl.GrblState
 
 class MainActivity : AppCompatActivity() {
@@ -222,8 +222,8 @@ class MainActivity : AppCompatActivity() {
                         startActivity(intent)
                         true
                     }
-                    R.id.notifications -> {
-                        val intent = Intent(this, NotificationsActivity::class.java)
+                    R.id.gCode -> {
+                        val intent = Intent(this, GcodeActivity::class.java)
                         startActivity(intent)
                         true
                     }
@@ -365,9 +365,9 @@ class MainActivity : AppCompatActivity() {
                 btService.send("?")
             }
             val interval = if (isStreaming) {
-                150L
-            } else {
                 getUpdateInterval()
+            } else {
+                100L
             }
             handler.postDelayed(this, interval)
         }

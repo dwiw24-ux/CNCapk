@@ -1,5 +1,6 @@
 package com.grbl.cnc.adapter
 
+import android.annotation.SuppressLint
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.ViewGroup
@@ -33,6 +34,7 @@ class GcodeAdapter(
 
     override fun getItemCount() = lines.size
 
+    @SuppressLint("SetTextI18n")
     override fun onBindViewHolder(holder: VH, position: Int) {
         holder.tv.text = "${position + 1}. ${lines[position]}"
 

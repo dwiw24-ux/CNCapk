@@ -34,19 +34,19 @@ class SettingProbeFragment : Fragment(R.layout.fragment_settings) {
             SettingItem(
                 R.drawable.ic_settings_applications_black_24dp,
                 "Probe Distance",
-                "Current Maximum probing distance : ${prefs.getFloat("probe_dist", 50f)} (mm)",
+                "Current Maximum probing distance : ${prefs.getFloat("probe_dist", 50f)} mm",
                 "probe_dist"
             ),
             SettingItem(
                 R.drawable.ic_settings_applications_black_24dp,
                 "Probe Plate Thickness",
-                "Current Thickness of plate : ${prefs.getFloat("probe_plate", 1.5f)} (mm)",
+                "Current Thickness of plate : ${prefs.getFloat("probe_plate", 1.5f)} mm",
                 "probe_plate"
             ),
             SettingItem(
                 R.drawable.ic_settings_applications_black_24dp,
                 "Probe Retract",
-                "Current Retract height after touch : ${prefs.getFloat("probe_retract", 5f)} (mm)",
+                "Current Retract height after touch : ${prefs.getFloat("probe_retract", 5f)} mm",
                 "probe_retract"
             )
         )

@@ -35,6 +35,22 @@ class MainViewModel : ViewModel() {
     private val _spindleDirection = MutableLiveData<SpindleDirection>()
     val spindleDirection: LiveData<SpindleDirection> = _spindleDirection
 
+    // ✅ Feed override
+    private val _feedOverride = MutableLiveData<Int>()
+    val feedOverride: LiveData<Int> = _feedOverride
+
+    // ✅ Rapid override
+    private val _rapidOverride = MutableLiveData<Int>()
+    val rapidOverride: LiveData<Int> = _rapidOverride
+
+    // ✅ Spindle override
+    private val _spindleOverride = MutableLiveData<Int>()
+    val spindleOverride: LiveData<Int> = _spindleOverride
+
+    // ✅ Current running line number
+    private val _lineNumber = MutableLiveData<Int>()
+    val lineNumber: LiveData<Int> = _lineNumber
+
     fun updateStatus(status: GrblStatus) {
         _grblStatus.value = status
         _plannerAvailable.value = status.plannerAvailable
@@ -47,6 +63,14 @@ class MainViewModel : ViewModel() {
         _floodOn.value = status.flood
         _mistOn.value = status.mist
         _spindleDirection.value = status.spindleDirection
+
+        // ✅ Overrides
+        _feedOverride.value = status.ovFeed
+        _rapidOverride.value = status.ovRapid
+        _spindleOverride.value = status.ovSpindle
+
+        // ✅ Line number
+        _lineNumber.value = status.lineNumber
     }
 
     private fun mapState(state: String): GrblState {

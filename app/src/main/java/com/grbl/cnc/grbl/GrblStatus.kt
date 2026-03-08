@@ -19,5 +19,10 @@ data class GrblStatus(
 
     val flood: Boolean,
     val mist: Boolean,
-    val spindleDirection: SpindleDirection
+    val spindleDirection: SpindleDirection,
+
+    val ovFeed: Int,
+    val ovRapid: Int,
+    val ovSpindle: Int,
+    val lineNumber: Int
 )

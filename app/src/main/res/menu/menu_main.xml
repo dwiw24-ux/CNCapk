@@ -10,8 +10,8 @@
         app:showAsAction="never" />
 
     <item
-        android:id="@+id/notifications"
-        android:title="Notifications"
+        android:id="@+id/gCode"
+        android:title="Gcode"
         android:titleTextColor="@color/black"
         app:showAsAction="never" />
 

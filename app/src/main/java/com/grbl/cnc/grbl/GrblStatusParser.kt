@@ -6,6 +6,10 @@ object GrblStatusParser {
     private var mpos = doubleArrayOf(0.0, 0.0, 0.0)
     private var wpos = doubleArrayOf(0.0, 0.0, 0.0)
     private var wco = doubleArrayOf(0.0, 0.0, 0.0)
+    private var ovFeed = 100
+    private var ovRapid = 100
+    private var ovSpindle = 100
+
     fun parse(line: String): GrblStatus? {
 
         if (!line.startsWith("<") || !line.endsWith(">")) return null
@@ -29,6 +33,20 @@ object GrblStatusParser {
             var flood = false
             var mist = false
             var spindleDirection = SpindleDirection.OFF
+
+            /**var ovFeed = 100
+            var ovRapid = 100
+            var ovSpindle = 100**/
+            var lineNumber = 0
+
+            /**var pinX = false
+            var pinY = false
+            var pinZ = false
+            var pinProbe = false
+            var pinDoor = false
+            var pinHold = false
+            var pinReset = false
+            var pinStart = false**/
 
             for (p in parts) {
                 when {
@@ -59,14 +77,45 @@ object GrblStatusParser {
                         feed = fs[0].toInt()
                         spindle = fs[1].toInt()
                     }
+                    p.startsWith("F:") -> {
+                        feed = p.substring(2).toIntOrNull() ?: feed
+                    }
+                    p.startsWith("S:") -> {
+                        spindle = p.substring(2).toIntOrNull() ?: spindle
+                    }
+                    p.startsWith("SD:") -> {
+                        spindleDirection = when (p.substring(3)) {
+                            "CW" -> SpindleDirection.CW
+                            "CCW" -> SpindleDirection.CCW
+                            else -> SpindleDirection.OFF
+                        }
+                    }
                     p.startsWith("Pn:") -> {
                         pin = p.substring(3)
+
+                        /**val s = pin ?: ""
+
+                        pinX = s.contains("X")
+                        pinY = s.contains("Y")
+                        pinZ = s.contains("Z")
+                        pinProbe = s.contains("P")
+                        pinDoor = s.contains("D")
+                        pinHold = s.contains("H")
+                        pinReset = s.contains("R")
+                        pinStart = s.contains("S")**/
                     }
                     p.startsWith("Bf:") -> {
                         val bf = p.substring(3).split(",")
 
                         plannerAvailable = bf.getOrNull(0)?.toIntOrNull() ?: plannerAvailable
                         rxAvailable = bf.getOrNull(1)?.toIntOrNull() ?:  rxAvailable
+                    }
+                    p.startsWith("Buf:") -> {
+                        plannerAvailable = p.substring(4).toIntOrNull() ?: plannerAvailable
+                    }
+
+                    p.startsWith("RX:") -> {
+                        rxAvailable = p.substring(3).toIntOrNull() ?: rxAvailable
                     }
                     p.startsWith("A:") -> {
                         val acc = p.substring(2)
@@ -78,6 +127,17 @@ object GrblStatusParser {
                             acc.contains("C") -> SpindleDirection.CCW
                             else -> SpindleDirection.OFF
                         }
+                    }
+                    p.startsWith("Ov:") -> {
+                        val ov = p.substring(3).split(",")
+
+                        ovFeed = ov.getOrNull(0)?.toIntOrNull() ?: ovFeed
+                        ovRapid = ov.getOrNull(1)?.toIntOrNull() ?: ovRapid
+                        ovSpindle = ov.getOrNull(2)?.toIntOrNull() ?: ovSpindle
+                    }
+
+                    p.startsWith("Ln:") -> {
+                        lineNumber = p.substring(3).toIntOrNull() ?: lineNumber
                     }
                 }
             }
@@ -103,7 +163,11 @@ object GrblStatusParser {
                 rxAvailable,
                 flood,
                 mist,
-                spindleDirection
+                spindleDirection,
+                ovFeed,
+                ovRapid,
+                ovSpindle,
+                lineNumber
             )
 
         } catch (e: Exception) {
