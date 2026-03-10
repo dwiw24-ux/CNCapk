@@ -29,7 +29,7 @@ class JogFragment : Fragment(R.layout.frag_jog) {
     private val continuousInterval = 100L
     private var jogHandler = Handler(Looper.getMainLooper())
     private var jogRunnable: Runnable? = null
-    private var step = 5.0
+    private var step = 5.0f
     private var feed = 1000
 
     private var probeDist = 0f
@@ -37,6 +37,8 @@ class JogFragment : Fragment(R.layout.frag_jog) {
     private var probeRetract = 0f
     private var probeFeedFast = 0
     private var probeFeedSlow = 0
+    private var probeDelay = 0
+    private var holdDistance = 0f
 
     private val viewModel: MainViewModel by activityViewModels()
     private var currentState: GrblState = GrblState.UNKNOWN
@@ -56,14 +58,23 @@ class JogFragment : Fragment(R.layout.frag_jog) {
     private lateinit var g59: Button
     private lateinit var btnProbe: Button
 
+    @SuppressLint("SetTextI18n")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        val prefs = requireContext()
+            .getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
+
+        step = prefs.getFloat("jog_step", 5.0f)
+        feed = prefs.getInt("jog_feed", 1000)
 
         val txtStep = view.findViewById<TextView>(R.id.txtStep)
         val txtFeed = view.findViewById<TextView>(R.id.txtFeed)
 
         val seekStep = view.findViewById<SeekBar>(R.id.seekStep)
         val seekFeed = view.findViewById<SeekBar>(R.id.seekFeed)
+        txtStep.text = "Step: $step mm"
+        txtFeed.text = "Feed: $feed mm/menit"
 
         btnHoming = view.findViewById(R.id.btnHoming)
         btnStop = view.findViewById(R.id.btnStop)
@@ -123,24 +134,35 @@ class JogFragment : Fragment(R.layout.frag_jog) {
             btnProbe.alpha = alpha
         }
 
-        seekStep.progress = 50 // default
+        //seekStep.progress = 50 // default
+        seekStep.progress = when (step) {
+            0.1f -> 0
+            1.0f -> 10
+            5.0f -> 30
+            10.0f -> 60
+            100.0f -> 90
+            else -> 30
+        }
         seekStep.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             @SuppressLint("SetTextI18n")
             override fun onProgressChanged(sb: SeekBar, p: Int, fromUser: Boolean) {
                 step = when {
-                    p < 5 -> 0.1
-                    p < 25 -> 1.0
-                    p < 50 -> 5.0
-                    p < 75 -> 10.0
-                    else -> 100.0
+                    p < 5 -> 0.1f
+                    p < 25 -> 1.0f
+                    p < 50 -> 5.0f
+                    p < 75 -> 10.0f
+                    else -> 100.0f
                 }
                 txtStep.text = "Step: $step mm"
             }
             override fun onStartTrackingTouch(sb: SeekBar) {}
-            override fun onStopTrackingTouch(sb: SeekBar) {}
+            @SuppressLint("UseKtx")
+            override fun onStopTrackingTouch(sb: SeekBar) {
+                prefs.edit().putFloat("jog_step", step).apply()
+            }
         })
 
-        seekFeed.progress = feed
+        seekFeed.progress = maxOf(100, feed)
         seekFeed.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             @SuppressLint("SetTextI18n")
             override fun onProgressChanged(sb: SeekBar, p: Int, fromUser: Boolean) {
@@ -148,7 +170,10 @@ class JogFragment : Fragment(R.layout.frag_jog) {
                 txtFeed.text = "Feed: $feed mm/menit"
             }
             override fun onStartTrackingTouch(sb: SeekBar) {}
-            override fun onStopTrackingTouch(sb: SeekBar) {}
+            @SuppressLint("UseKtx")
+            override fun onStopTrackingTouch(sb: SeekBar) {
+                prefs.edit().putInt("jog_feed", feed).apply()
+            }
         })
 
         bindJogButton(view, R.id.btnXPlus, "X", 1)
@@ -160,7 +185,7 @@ class JogFragment : Fragment(R.layout.frag_jog) {
 
         btnHoming.setOnClickListener {
             showConfirmDialog(
-                "HOMONG",
+                "HOMING",
                 "Run homing cycle?"
             ) {
                 sendCommand("\$H\n")
@@ -183,7 +208,7 @@ class JogFragment : Fragment(R.layout.frag_jog) {
         jogAll0.setOnClickListener {
             showConfirmDialog(
                 "ZERO ALL",
-                "Set zero all axiz?"
+                "Set XYZ axiz to zero?"
             ) {
                 sendCommand("G10 L20 P0 X0Y0Z0\n")
             }
@@ -230,23 +255,24 @@ class JogFragment : Fragment(R.layout.frag_jog) {
             probeDist = prefs.getFloat("probe_dist", 50f)
             probePlate = prefs.getFloat("probe_plate", 1.5f)
             probeRetract = prefs.getFloat("probe_retract", 5f)
+            probeDelay = prefs.getInt("probe_delay", 2)
 
             showConfirmDialog(
                 "PROBE",
                 "Run Probe Z axiz ?"
             ) {
-                sendCommand("G4 P2\n")
+                sendCommand("G4 P$probeDelay\n")
                 sendCommand("G91\n")
                 sendCommand("G38.2 Z-$probeDist F$probeFeedFast\n")
                 sendCommand("G10 L20 P0 Z$probePlate\n")
 
-                sendCommand("G4 P1\n")
+                sendCommand("G4 P$probeDelay\n")
                 sendCommand("G0 Z$probeRetract\n")
-                sendCommand("G4 P1\n")
+                sendCommand("G4 P$probeDelay\n")
                 sendCommand("G38.2 Z-$probeDist F$probeFeedSlow\n")
-                sendCommand("G10 L20 P0 Z1.500\n")
+                sendCommand("G10 L20 P0 Z$probePlate\n")
 
-                sendCommand("G4 P1\n")
+                sendCommand("G4 P$probeDelay\n")
                 sendCommand("G0 Z$probeRetract\n")
                 sendCommand("G90\n")
             }
@@ -267,8 +293,12 @@ class JogFragment : Fragment(R.layout.frag_jog) {
 
     private fun sendJog(axis: String, dir: Int, isContinous: Boolean = false) {
         (activity as? MainActivity)?.isJogging = true
+
+        val prefs = requireContext().getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
+        holdDistance = prefs.getFloat("hold_distance", 1f)
+
         val distance = if (isContinous) {
-            0.5 * dir
+            holdDistance * dir
         } else {
             step * dir
         }

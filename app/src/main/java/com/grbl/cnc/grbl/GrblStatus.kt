@@ -23,6 +23,5 @@ data class GrblStatus(
 
     val ovFeed: Int,
     val ovRapid: Int,
-    val ovSpindle: Int,
-    val lineNumber: Int
+    val ovSpindle: Int
 )

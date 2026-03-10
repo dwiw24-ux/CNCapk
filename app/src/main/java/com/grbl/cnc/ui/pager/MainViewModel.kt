@@ -47,10 +47,6 @@ class MainViewModel : ViewModel() {
     private val _spindleOverride = MutableLiveData<Int>()
     val spindleOverride: LiveData<Int> = _spindleOverride
 
-    // ✅ Current running line number
-    private val _lineNumber = MutableLiveData<Int>()
-    val lineNumber: LiveData<Int> = _lineNumber
-
     fun updateStatus(status: GrblStatus) {
         _grblStatus.value = status
         _plannerAvailable.value = status.plannerAvailable
@@ -68,9 +64,6 @@ class MainViewModel : ViewModel() {
         _feedOverride.value = status.ovFeed
         _rapidOverride.value = status.ovRapid
         _spindleOverride.value = status.ovSpindle
-
-        // ✅ Line number
-        _lineNumber.value = status.lineNumber
     }
 
     private fun mapState(state: String): GrblState {

@@ -48,6 +48,12 @@ class SettingProbeFragment : Fragment(R.layout.fragment_settings) {
                 "Probe Retract",
                 "Current Retract height after touch : ${prefs.getFloat("probe_retract", 5f)} mm",
                 "probe_retract"
+            ),
+            SettingItem(
+                R.drawable.ic_settings_applications_black_24dp,
+                "Probe Delay",
+                "Current Probe Delay : ${prefs.getInt("probe_delay", 2)} second",
+                "probe_delay"
             )
         )
 
@@ -66,10 +72,15 @@ class SettingProbeFragment : Fragment(R.layout.fragment_settings) {
     private fun showNumberDialog(item: SettingItem) {
 
         val editText = EditText(requireContext())
-        editText.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+        editText.inputType =
+            if (item.key == "probe_delay" || item.key == "probe_feed")
+                InputType.TYPE_CLASS_NUMBER
+            else
+                InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
 
         val currentValue = when (item.key) {
             "probe_feed" -> prefs.getInt(item.key, 100).toString()
+            "probe_delay" -> prefs.getInt(item.key, 2).toString()
             else -> prefs.getFloat(item.key, 0f).toString()
         }
 
@@ -84,10 +95,10 @@ class SettingProbeFragment : Fragment(R.layout.fragment_settings) {
 
                 prefs.edit().apply {
 
-                    if (item.key == "probe_feed") {
-                        putInt(item.key, value.toIntOrNull() ?: 100)
-                    } else {
-                        putFloat(item.key, value.toFloatOrNull() ?: 0f)
+                    when (item.key) {
+                        "probe_feed" -> putInt(item.key, value.toIntOrNull() ?: 100)
+                        "probe_delay" -> putInt(item.key, value.toIntOrNull() ?: 2)
+                        else -> putFloat(item.key, value.toFloatOrNull() ?: 0f)
                     }
 
                     apply()

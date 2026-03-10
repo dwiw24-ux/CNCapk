@@ -162,7 +162,7 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 txtStatus.text = "Connected ${btService.connectedDeviceName}"
                 pendingGrblConnect = true
-                Toast.makeText(this, "Bluetooth Connected", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Bluetooth Connected", Toast.LENGTH_LONG).show()
             }
             handler.post(statusRunnable)
             startKeepAliveService()
@@ -412,13 +412,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun showExitDialog() {
         MaterialAlertDialogBuilder(this)
-            .setTitle("Keluar Aplikasi")
-            .setMessage("Yakin ingin keluar ?")
-            .setPositiveButton("Keluar") { _, _ ->
+            .setTitle("Confirm Exit")
+            .setMessage("Next Exit Application ?")
+            .setPositiveButton("OK") { _, _ ->
                 finishAffinity()
                 btService.disconnect()
             }
-            .setNegativeButton("Batal", null)
+            .setNegativeButton("Cancel", null)
             .show()
     }
 

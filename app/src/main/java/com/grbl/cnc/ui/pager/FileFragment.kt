@@ -35,6 +35,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
     // ===== RUN STATE =====
     private var lines: List<String> = emptyList()
     private var current = 0
+    private var currentFileName = ""
 
     // ===== UI =====
     private lateinit var progressBar: ProgressBar
@@ -47,7 +48,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
     private lateinit var txtFileInfo: TextView
     private lateinit var rv: RecyclerView
     private lateinit var adapter: GcodeAdapter
-    private var currentFileName = ""
 
     // ===== RUN TIME TIMER =====
     private var startTime = 0L
@@ -75,13 +75,13 @@ class FileFragment : Fragment(R.layout.frag_file) {
     private lateinit var btnFlood: Button
     private lateinit var btnMist: Button
 
-    private val streamHandler = Handler(Looper.getMainLooper())
     private val timerHandler = Handler(Looper.getMainLooper())
     private val viewModel: MainViewModel by activityViewModels()
     private var lastPlannerAvailable = 16
     private var currentState: GrblState = GrblState.UNKNOWN
 
     private var dwellInjected = false
+    private var enableSpindleDwell = true
     private var spindleDelaySeconds = 0
     private var safeZ = 0f
     private var rxSafe = 0
@@ -133,10 +133,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
         viewModel.plannerAvailable.observe(viewLifecycleOwner) { planner ->
             lastPlannerAvailable = planner
             updateFromPlanner()
-
-            /**if (runMode == RunMode.RUNNING) {
-                sendUntilBufferFull()
-            }**/
         }
         viewModel.grblRunMode.observe(viewLifecycleOwner) { state ->
             currentState = state
@@ -164,9 +160,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
         }
         viewModel.spindleOverride.observe(viewLifecycleOwner) {
             txtSpinOv.text = "Spindle : $it%"
-        }
-        viewModel.lineNumber.observe(viewLifecycleOwner) {ln ->
-            txtFileInfo.text = "File: $currentFileName\nLines: $ln of ${lines.size}"
         }
         /**viewModel.spindleDirection.observe(viewLifecycleOwner) { dir ->
             when (dir) {
@@ -238,16 +231,16 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 .setTitle("Run File : $currentFileName")
                 .setMessage(
                     "⚠ PASTIKAN:\n\n" +
-                            "• Sudah Homing\n" +
-                            "• Work Offset Benar\n\n" +
-                            "• Lanjutkan ?")
+                            "• Homing OK\n" +
+                            "• Work Offset OK\n\n" +
+                            "• Next ?")
                 .setPositiveButton("Ok") { _, _ ->
                     val main = activity as? MainActivity ?: return@setPositiveButton
                     wcsBeforeRun = main.currentWcs
                     Toast.makeText(requireContext(), "Start Streaming Gcode", Toast.LENGTH_SHORT).show()
                     startRun()
                 }
-                .setNegativeButton("Batal", null)
+                .setNegativeButton("Cancel", null)
                 .show()
         }
 
@@ -275,7 +268,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
             bytesInFlight = 0
             timerRunning = false
             timerHandler.removeCallbacks(timerRunnable)
-            //streamHandler.removeCallbacks(streamRunnable)
 
             (activity as? MainActivity)?.isStreaming = false
             updateServiceProgress(100)
@@ -415,13 +407,12 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
         timerRunning = false
         timerHandler.removeCallbacks(timerRunnable)
-        //streamHandler.removeCallbacks(streamRunnable)
 
         progressBar.progress = 0
         txtProgress.text = "0 %"
         txtEta.text = "Run Time: 00:00"
 
-        txtFileInfo.text = "File: $currentFileName\nLines: 0 of ${lines.size}"
+        txtFileInfo.text = "File: $currentFileName\nLines: ${lines.size}"
     }
 
     private fun startRun() {
@@ -430,10 +421,9 @@ class FileFragment : Fragment(R.layout.frag_file) {
         sendQueue.clear()
         sendQueue.addAll(lines.map { QueueItem(it, true)})
 
-        current = 0
+        current = 1
         runMode = RunMode.RUNNING
         dwellInjected = false
-
         bytesInFlight = 0
         inFlightQueue.clear()
 
@@ -443,20 +433,18 @@ class FileFragment : Fragment(R.layout.frag_file) {
             .getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
         spindleDelaySeconds = prefs.getInt("spindle_delay", 2)
         rxSafe = prefs.getInt("rx_safe", 4)
+        enableSpindleDwell = prefs.getBoolean("enable_spindle_dwell", true)
 
         startTime = System.currentTimeMillis()
         pausedDuration = 0
         timerRunning = true
         timerHandler.post(timerRunnable)
-        //streamHandler.post(streamRunnable)
         edtStart.setText("1")
 
-        //sendNext()
         sendUntilBufferFull()
     }
 
-    /**
-    private fun sendUntilBufferFull() {
+    private fun sendUntilBufferFull2() {
         if (runMode != RunMode.RUNNING) return
         if (currentState == GrblState.ALARM) return
         if (sendQueue.isEmpty()) return
@@ -491,9 +479,8 @@ class FileFragment : Fragment(R.layout.frag_file) {
             inFlightQueue.addLast(len to item.isFileLine)
         }
     }
-     **/
 
-    private fun sendUntilBufferFull() {
+    private fun sendUntilBufferFull1() {
         if (runMode != RunMode.RUNNING) return
         if (currentState == GrblState.ALARM) return
         if (sendQueue.isEmpty()) return
@@ -501,7 +488,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
         val bt = (activity as? MainActivity)?.btService ?: return
 
         while (sendQueue.isNotEmpty()) {
-            //val item = sendQueue.removeFirst()
             val item = sendQueue.first()
             val cmdUpper = item.cmd.trim().uppercase()
 
@@ -519,7 +505,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
             val len = cmd2.length
 
             if (bytesInFlight + len >= grblRxBuffer - rxSafe) {
-                //sendQueue.addFirst(item)
                 break
             }
             sendQueue.removeFirst()
@@ -529,14 +514,51 @@ class FileFragment : Fragment(R.layout.frag_file) {
             inFlightQueue.addLast(len to item.isFileLine)
         }
     }
+    private fun sendUntilBufferFull() {
 
+        if (runMode != RunMode.RUNNING) return
+        if (currentState == GrblState.ALARM) return
+        if (sendQueue.isEmpty()) return
+
+        val bt = (activity as? MainActivity)?.btService ?: return
+        while (sendQueue.isNotEmpty()) {
+            val item = sendQueue.first()
+            val cmd2 = item.cmd.trim() + "\n"
+            val len = cmd2.length
+            if (bytesInFlight + len >= grblRxBuffer - rxSafe) {
+                break
+            }
+            sendQueue.removeFirst()
+            bt.send(cmd2)
+            bytesInFlight += len
+            inFlightQueue.addLast(len to item.isFileLine)
+
+            val cmdUpper = item.cmd.trim().uppercase()
+            if (enableSpindleDwell) {
+                if (!dwellInjected &&
+                    spindleDelaySeconds > 0 &&
+                    item.isFileLine &&
+                    (cmdUpper.contains("M3") || cmdUpper.contains("M4"))
+                ) {
+                    val dwellCmd = "G4 P$spindleDelaySeconds\n"
+                    val dwellLen = dwellCmd.length
+                    if (bytesInFlight + dwellLen >= grblRxBuffer - rxSafe) {
+                        sendQueue.addFirst(QueueItem(dwellCmd.trim(), false))
+                    } else {
+                        bt.send(dwellCmd)
+                        bytesInFlight += dwellLen
+                        inFlightQueue.addLast(dwellLen to false)
+                    }
+                    dwellInjected = true
+                }
+            }
+        }
+    }
     @SuppressLint("SetTextI18n")
     private fun runFromHere(index: Int) {
         if (index !in lines.indices) return
-        //val bt = (activity as? MainActivity)?.btService ?: return
         val prefs = requireContext()
             .getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
-        //spindleDelaySeconds = prefs.getInt("spindle_delay", 2)
         rxSafe = prefs.getInt("rx_safe", 4)
 
         val st = scanStatePro(lines, index)
@@ -546,7 +568,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
         }
 
         runMode = RunMode.IDLE
-        //bt.sendRealtime(0x18.toByte())
 
         Handler(Looper.getMainLooper()).postDelayed({
             sendQueue.clear()
@@ -556,7 +577,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
             sendQueue.addAll(buildRunFromHereHeader(st).map{ QueueItem(it,false)})
             sendQueue.addAll(lines.subList(index, lines.size).map{ QueueItem(it,true)})
 
-            current = index
+            current = index + 1
             runMode = RunMode.RUNNING
 
             (activity as? MainActivity)?.isStreaming = true
@@ -565,10 +586,8 @@ class FileFragment : Fragment(R.layout.frag_file) {
             pausedDuration = 0
             timerRunning = true
             timerHandler.post(timerRunnable)
-            //streamHandler.post(streamRunnable)
-            edtStart.setText(current.toString())
+            edtStart.setText((current + 1).toString())
 
-            //sendNext()
             sendUntilBufferFull()
         }, 400)
     }
@@ -717,7 +736,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
         runMode = RunMode.IDLE
         timerRunning = false
         timerHandler.removeCallbacks(timerRunnable)
-        //streamHandler.removeCallbacks(streamRunnable)
 
         (activity as? MainActivity)?.isStreaming = false
         bt.send("$wcsBeforeRun\n")
@@ -734,8 +752,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
         sendQueue.clear()
         timerRunning = false
         timerHandler.removeCallbacks(timerRunnable)
-        //streamHandler.removeCallbacks(streamRunnable)
-
         (activity as? MainActivity)?.isStreaming = false
 
         updateServiceProgress(100)
@@ -806,15 +822,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
         }
         requireContext().startService(intent)
     }
-
-    /**private val streamRunnable = object : Runnable {
-        override fun run() {
-            if (runMode == RunMode.RUNNING) {
-                sendUntilBufferFull()
-            }
-            streamHandler.postDelayed(this, 10)
-        }
-    }**/
 
     private fun updateButton(currentState: GrblState) {
         when (currentState) {

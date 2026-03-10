@@ -49,6 +49,12 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
             ),
             SettingItem(
                 R.drawable.ic_settings_applications_black_24dp,
+                "Spindle Dwell Injection",
+                "Status: ${if (prefs.getBoolean("enable_spindle_dwell", true)) "ON" else "OFF"}",
+                "spindleDwell"
+            ),
+            SettingItem(
+                R.drawable.ic_settings_applications_black_24dp,
                 "Spindle Start Delay",
                 "Delay: ${prefs.getInt("spindle_delay", 2)} sec",
                 "spindle"
@@ -98,6 +104,12 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
                 }
                 "safe_z" -> {
                     safeZDialog()
+                }
+                "spindleDwell" -> {
+                    toggleBooleanDialog(
+                        title = "Enable Spindle Dwell Injection",
+                        key = "enable_spindle_dwell"
+                    )
                 }
                 "spindle" -> {
                     spindleDelayDialog()
@@ -197,9 +209,9 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
         val prefs = requireContext()
             .getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
 
-        val options = arrayOf("0 byte", "1 byte", "2 byte", "3 byte", "4 byte",
-            "5 byte", "6 byte", "7 byte", "8 byte")
-        val values = arrayOf(0, 1, 2, 3, 4, 5, 6, 7, 8)
+        val options = arrayOf("0 byte", "2 byte", "4 byte", "6 byte", "8 byte",
+            "10 byte", "12 byte", "14 byte", "16 byte")
+        val values = arrayOf(0, 2, 4, 6, 8, 10, 12, 14, 16)
 
         val current = prefs.getInt("rx_safe", 4)
         val selectedIndex = values.indexOf(current).coerceAtLeast(0)

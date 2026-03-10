@@ -1,7 +1,5 @@
 package com.grbl.cnc.grbl
 
-import android.util.Log
-
 object GrblStatusParser {
     private var mpos = doubleArrayOf(0.0, 0.0, 0.0)
     private var wpos = doubleArrayOf(0.0, 0.0, 0.0)
@@ -37,7 +35,6 @@ object GrblStatusParser {
             /**var ovFeed = 100
             var ovRapid = 100
             var ovSpindle = 100**/
-            var lineNumber = 0
 
             /**var pinX = false
             var pinY = false
@@ -135,10 +132,6 @@ object GrblStatusParser {
                         ovRapid = ov.getOrNull(1)?.toIntOrNull() ?: ovRapid
                         ovSpindle = ov.getOrNull(2)?.toIntOrNull() ?: ovSpindle
                     }
-
-                    p.startsWith("Ln:") -> {
-                        lineNumber = p.substring(3).toIntOrNull() ?: lineNumber
-                    }
                 }
             }
 
@@ -166,11 +159,10 @@ object GrblStatusParser {
                 spindleDirection,
                 ovFeed,
                 ovRapid,
-                ovSpindle,
-                lineNumber
+                ovSpindle
             )
 
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
