@@ -43,12 +43,9 @@ class ConsoleFragment : Fragment(R.layout.frag_console) {
         }
 
         val switchVerbose = view.findViewById<SwitchMaterial>(R.id.switchVerbose)
-
         switchVerbose.isChecked = false // DEFAULT OFF
-
         switchVerbose.setOnCheckedChangeListener { _, isChecked ->
             verboseEnabled = isChecked
-
             appendRx(
                 if (isChecked)
                     "Verbose ON – show all GRBL output"
@@ -74,13 +71,11 @@ class ConsoleFragment : Fragment(R.layout.frag_console) {
 
         waitingCommandOk = true
         txtConsole.append(">> $cmd\n")
-
         (activity as? MainActivity)?.btService?.send(fixed)
     }
 
     override fun onStart() {
         super.onStart()
-
         val main = activity as? MainActivity ?: return
         main.btService.addRawListener(consoleListener)
 
@@ -175,5 +170,4 @@ class ConsoleFragment : Fragment(R.layout.frag_console) {
             }
         }
     }
-
 }

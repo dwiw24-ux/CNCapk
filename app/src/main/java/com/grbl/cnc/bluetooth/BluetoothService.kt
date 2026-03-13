@@ -149,6 +149,8 @@ class BluetoothService(private val context: Context) {
     fun disconnect() {
         try {
             isConnected = false
+            input?.close()
+            output?.close()
             socket?.close()
             onDisconnected?.invoke()
         } catch (_: Exception) {}

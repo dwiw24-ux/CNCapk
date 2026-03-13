@@ -234,13 +234,13 @@ class FileFragment : Fragment(R.layout.frag_file) {
                             "• Homing OK\n" +
                             "• Work Offset OK\n\n" +
                             "• Next ?")
-                .setPositiveButton("Ok") { _, _ ->
+                .setPositiveButton("RUN") { _, _ ->
                     val main = activity as? MainActivity ?: return@setPositiveButton
                     wcsBeforeRun = main.currentWcs
-                    Toast.makeText(requireContext(), "Start Streaming Gcode", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Start Streaming $currentFileName", Toast.LENGTH_LONG).show()
                     startRun()
                 }
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton("CANCEL", null)
                 .show()
         }
 
@@ -251,11 +251,16 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 runMode = RunMode.PAUSED
                 btnPause.text = "RESUME"
                 pauseStart = System.currentTimeMillis()
+                Toast.makeText(requireContext(), "Hold Streaming $currentFileName", Toast.LENGTH_LONG).show()
             } else if (runMode == RunMode.PAUSED) {
                 bt.send("~")
                 pausedDuration += System.currentTimeMillis() - pauseStart
                 runMode = RunMode.RUNNING
                 btnPause.text = "HOLD"
+                Toast.makeText(requireContext(), "Resume Streaming $currentFileName", Toast.LENGTH_LONG).show()
+                if (runMode == RunMode.RUNNING) {
+                    sendUntilBufferFull()
+                }
             }
         }
 
@@ -271,6 +276,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
             (activity as? MainActivity)?.isStreaming = false
             updateServiceProgress(100)
+            Toast.makeText(requireContext(), "Stop Streaming $currentFileName", Toast.LENGTH_LONG).show()
         }
 
         btnRunFromHere.setOnClickListener {
@@ -484,22 +490,11 @@ class FileFragment : Fragment(R.layout.frag_file) {
         if (runMode != RunMode.RUNNING) return
         if (currentState == GrblState.ALARM) return
         if (sendQueue.isEmpty()) return
-
         val bt = (activity as? MainActivity)?.btService ?: return
 
         while (sendQueue.isNotEmpty()) {
             val item = sendQueue.first()
             val cmdUpper = item.cmd.trim().uppercase()
-
-            if (!dwellInjected &&
-                spindleDelaySeconds > 0 &&
-                item.isFileLine &&
-                (cmdUpper.contains("M3") || cmdUpper.contains("M4"))) {
-
-                dwellInjected = true
-                sendQueue.addFirst( QueueItem("G4 P$spindleDelaySeconds", false) )
-            }
-
             val cmd2 = item.cmd.trim() + "\n"
             //val len = cmd2.toByteArray(Charsets.US_ASCII).size
             val len = cmd2.length
@@ -509,7 +504,6 @@ class FileFragment : Fragment(R.layout.frag_file) {
             }
             sendQueue.removeFirst()
             bt.send(cmd2)
-
             bytesInFlight += len
             inFlightQueue.addLast(len to item.isFileLine)
         }
@@ -521,7 +515,9 @@ class FileFragment : Fragment(R.layout.frag_file) {
         if (sendQueue.isEmpty()) return
 
         val bt = (activity as? MainActivity)?.btService ?: return
-        while (sendQueue.isNotEmpty()) {
+        var sent = 0
+        while (sendQueue.isNotEmpty() && sent < 3) {
+        //while (sendQueue.isNotEmpty()) {
             val item = sendQueue.first()
             val cmd2 = item.cmd.trim() + "\n"
             val len = cmd2.length
@@ -529,6 +525,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 break
             }
             sendQueue.removeFirst()
+            sent++
             bt.send(cmd2)
             bytesInFlight += len
             inFlightQueue.addLast(len to item.isFileLine)
@@ -538,8 +535,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 if (!dwellInjected &&
                     spindleDelaySeconds > 0 &&
                     item.isFileLine &&
-                    (cmdUpper.contains("M3") || cmdUpper.contains("M4"))
-                ) {
+                    (cmdUpper.contains("M3") || cmdUpper.contains("M4"))) {
                     val dwellCmd = "G4 P$spindleDelaySeconds\n"
                     val dwellLen = dwellCmd.length
                     if (bytesInFlight + dwellLen >= grblRxBuffer - rxSafe) {
@@ -563,7 +559,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
         val st = scanStatePro(lines, index)
         if (st.z == null) {
-            txtEta.text = "Run From Here dibatalkan: Z unknown"
+            txtEta.text = "Canceled Run From Here: Z unknown"
             return
         }
 
@@ -723,10 +719,10 @@ class FileFragment : Fragment(R.layout.frag_file) {
             .setPositiveButton("RUN") { _, _ ->
                 val main = activity as? MainActivity ?: return@setPositiveButton
                 wcsBeforeRun = main.currentWcs
-                Toast.makeText(requireContext(), "Start Streaming Gcode", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Start Streaming $currentFileName line $lineNo", Toast.LENGTH_LONG).show()
                 runFromHere(index)
             }
-            .setNegativeButton("BATAL", null)
+            .setNegativeButton("CANCEL", null)
             .show()
     }
 
@@ -741,6 +737,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
         bt.send("$wcsBeforeRun\n")
 
         updateServiceProgress(100)
+        Toast.makeText(requireContext(), "Streaming $currentFileName Finished", Toast.LENGTH_LONG).show()
     }
 
     @SuppressLint("SetTextI18n")
@@ -784,9 +781,9 @@ class FileFragment : Fragment(R.layout.frag_file) {
         val autoScroll = prefs.getBoolean("auto_scroll", true)
         val showProgress = prefs.getBoolean("show_progress", true)
 
-        adapter.activeLine = activeLine
-        adapter.notifyDataSetChanged()
         if (autoScroll) {
+            adapter.activeLine = activeLine
+            adapter.notifyDataSetChanged()
             rv.scrollToPosition(activeLine)
         }
         edtStart.setText((activeLine + 1).toString())
