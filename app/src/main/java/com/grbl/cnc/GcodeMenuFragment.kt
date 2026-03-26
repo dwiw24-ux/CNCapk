@@ -1,4 +1,4 @@
-package com.grbl.cnc.ui
+package com.grbl.cnc
 
 import android.os.Bundle
 import android.view.View
@@ -6,11 +6,8 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.grbl.cnc.R
 import com.grbl.cnc.adapter.SettingAdapter
-import com.grbl.cnc.ui.settings.SettingItem
-import com.grbl.cnc.ui.settings.SettingJogFragment
-import com.grbl.cnc.ui.settings.SettingProbeFragment
+import com.grbl.cnc.settings.SettingItem
 
 class GcodeMenuFragment : Fragment(R.layout.fragment_settings) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

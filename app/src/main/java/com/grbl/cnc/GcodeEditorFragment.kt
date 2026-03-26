@@ -1,4 +1,4 @@
-package com.grbl.cnc.ui
+package com.grbl.cnc
 
 import android.annotation.SuppressLint
 import android.app.AlertDialog
@@ -14,7 +14,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.grbl.cnc.R
 import com.grbl.cnc.adapter.AdapterGcodeEditor
 
 class GcodeEditorFragment : Fragment(R.layout.gcode_editor) {

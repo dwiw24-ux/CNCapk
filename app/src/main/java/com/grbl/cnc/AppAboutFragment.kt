@@ -1,9 +1,8 @@
-package com.grbl.cnc.ui
+package com.grbl.cnc
 
 import android.os.Bundle
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
-import com.grbl.cnc.R
 
 class AppAboutFragment : PreferenceFragmentCompat() {
 
@@ -15,7 +14,7 @@ class AppAboutFragment : PreferenceFragmentCompat() {
                 .packageManager
                 .getPackageInfo(requireContext().packageName, 0)
                 .versionName
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             "Unknown"
         }
 

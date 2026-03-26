@@ -1,4 +1,4 @@
-package com.grbl.cnc.ui.pager
+package com.grbl.cnc.pager
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData

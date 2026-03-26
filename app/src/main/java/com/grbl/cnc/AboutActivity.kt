@@ -1,17 +1,8 @@
-package com.grbl.cnc.ui
+package com.grbl.cnc
 
-import android.content.Intent
 import android.os.Bundle
-import androidx.activity.addCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
-import androidx.core.view.WindowCompat
-import com.grbl.cnc.R
-import com.grbl.cnc.ui.AppAboutFragment
-import com.grbl.cnc.ui.settings.SettingJogFragment
-import com.grbl.cnc.ui.settings.SettingMenuFragment
-import com.grbl.cnc.ui.settings.SettingProbeFragment
-
 
 
 class AboutActivity : AppCompatActivity() {

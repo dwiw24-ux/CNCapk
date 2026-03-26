@@ -35,7 +35,7 @@
         android:theme="@style/Theme.DwiCreativeCNC">
 
         <activity
-            android:name=".ui.MainActivity"
+            android:name=".MainActivity"
             android:screenOrientation="portrait"
             android:resizeableActivity="false"
             android:windowSoftInputMode="adjustPan"
@@ -50,31 +50,31 @@
         </activity>
 
         <activity
-            android:name=".ui.SettingActivity"
+            android:name=".SettingActivity"
             android:screenOrientation="portrait"
             android:resizeableActivity="false"
             android:windowSoftInputMode="adjustPan"
-            android:exported="true"
+            android:exported="false"
             tools:ignore="DiscouragedApi,LockedOrientationActivity,NonResizeableActivity" />
 
         <activity
-            android:name=".ui.GcodeActivity"
+            android:name=".GcodeActivity"
             android:screenOrientation="portrait"
             android:resizeableActivity="false"
             android:windowSoftInputMode="adjustPan"
-            android:exported="true"
+            android:exported="false"
             tools:ignore="DiscouragedApi,LockedOrientationActivity,NonResizeableActivity" />
 
         <activity
-            android:name=".ui.AboutActivity"
+            android:name=".AboutActivity"
             android:screenOrientation="portrait"
             android:resizeableActivity="false"
             android:windowSoftInputMode="adjustPan"
-            android:exported="true"
+            android:exported="false"
             tools:ignore="DiscouragedApi,LockedOrientationActivity,NonResizeableActivity" />
 
         <service
-            android:name=".ui.StreamKeepAliveService"
+            android:name=".StreamKeepAliveService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice" />
     </application>

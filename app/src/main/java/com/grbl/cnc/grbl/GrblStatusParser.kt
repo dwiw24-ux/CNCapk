@@ -1,12 +1,10 @@
 package com.grbl.cnc.grbl
 
 object GrblStatusParser {
-    private var mpos = doubleArrayOf(0.0, 0.0, 0.0)
-    private var wpos = doubleArrayOf(0.0, 0.0, 0.0)
-    private var wco = doubleArrayOf(0.0, 0.0, 0.0)
-    private var ovFeed = 100
-    private var ovRapid = 100
-    private var ovSpindle = 100
+    @Volatile private var wco = doubleArrayOf(0.0, 0.0, 0.0)
+    @Volatile private var ovFeed = 100
+    @Volatile private var ovRapid = 100
+    @Volatile private var ovSpindle = 100
 
     fun parse(line: String): GrblStatus? {
 
@@ -16,7 +14,11 @@ object GrblStatusParser {
             val clean = line.substring(1, line.length - 1)
             val parts = clean.split("|")
 
+            if (parts.isEmpty()) return null
+
             val state = parts[0]
+            val mpos = doubleArrayOf(0.0, 0.0, 0.0)
+            val wpos = doubleArrayOf(0.0, 0.0, 0.0)
 
             var hasMPos = false
             var hasWPos = false
@@ -32,10 +34,6 @@ object GrblStatusParser {
             var mist = false
             var spindleDirection = SpindleDirection.OFF
 
-            /**var ovFeed = 100
-            var ovRapid = 100
-            var ovSpindle = 100**/
-
             /**var pinX = false
             var pinY = false
             var pinZ = false
@@ -49,43 +47,44 @@ object GrblStatusParser {
                 when {
                     p.startsWith("MPos:") -> {
                         val v = p.substring(5).split(",")
-                        mpos[0] = v[0].toDouble()
-                        mpos[1] = v[1].toDouble()
-                        mpos[2] = v[2].toDouble()
-                        hasMPos = true
+                        if (v.size >= 3) {
+                            mpos[0] = v[0].toDouble()
+                            mpos[1] = v[1].toDouble()
+                            mpos[2] = v[2].toDouble()
+                            hasMPos = true
+                        }
                     }
-
                     p.startsWith("WPos:") -> {
                         val v = p.substring(5).split(",")
-                        wpos[0] = v[0].toDouble()
-                        wpos[1] = v[1].toDouble()
-                        wpos[2] = v[2].toDouble()
-                        hasWPos = true
+                        if (v.size >= 3) {
+                            wpos[0] = v[0].toDouble()
+                            wpos[1] = v[1].toDouble()
+                            wpos[2] = v[2].toDouble()
+                            hasWPos = true
+                        }
                     }
-
                     p.startsWith("WCO:") -> {
                         val v = p.substring(4).split(",")
-                        wco[0] = v[0].toDouble()
-                        wco[1] = v[1].toDouble()
-                        wco[2] = v[2].toDouble()
+                        if (v.size >= 3) {
+                            wco = doubleArrayOf(
+                                v[0].toDouble(),
+                                v[1].toDouble(),
+                                v[2].toDouble()
+                            )
+                        }
                     }
                     p.startsWith("FS:") -> {
                         val fs = p.substring(3).split(",")
-                        feed = fs[0].toInt()
-                        spindle = fs[1].toInt()
+                        if (fs.size >= 2) {
+                            feed = fs[0].toIntOrNull() ?: feed
+                            spindle = fs[1].toIntOrNull() ?: spindle
+                        }
                     }
                     p.startsWith("F:") -> {
                         feed = p.substring(2).toIntOrNull() ?: feed
                     }
                     p.startsWith("S:") -> {
                         spindle = p.substring(2).toIntOrNull() ?: spindle
-                    }
-                    p.startsWith("SD:") -> {
-                        spindleDirection = when (p.substring(3)) {
-                            "CW" -> SpindleDirection.CW
-                            "CCW" -> SpindleDirection.CCW
-                            else -> SpindleDirection.OFF
-                        }
                     }
                     p.startsWith("Pn:") -> {
                         pin = p.substring(3)
@@ -103,20 +102,17 @@ object GrblStatusParser {
                     }
                     p.startsWith("Bf:") -> {
                         val bf = p.substring(3).split(",")
-
                         plannerAvailable = bf.getOrNull(0)?.toIntOrNull() ?: plannerAvailable
-                        rxAvailable = bf.getOrNull(1)?.toIntOrNull() ?:  rxAvailable
+                        rxAvailable = bf.getOrNull(1)?.toIntOrNull() ?: rxAvailable
                     }
                     p.startsWith("Buf:") -> {
                         plannerAvailable = p.substring(4).toIntOrNull() ?: plannerAvailable
                     }
-
                     p.startsWith("RX:") -> {
                         rxAvailable = p.substring(3).toIntOrNull() ?: rxAvailable
                     }
                     p.startsWith("A:") -> {
                         val acc = p.substring(2)
-
                         flood = acc.contains("F")
                         mist = acc.contains("M")
                         spindleDirection = when {
@@ -127,7 +123,7 @@ object GrblStatusParser {
                     }
                     p.startsWith("Ov:") -> {
                         val ov = p.substring(3).split(",")
-
+                        // Update persistent overrides
                         ovFeed = ov.getOrNull(0)?.toIntOrNull() ?: ovFeed
                         ovRapid = ov.getOrNull(1)?.toIntOrNull() ?: ovRapid
                         ovSpindle = ov.getOrNull(2)?.toIntOrNull() ?: ovSpindle
@@ -135,16 +131,24 @@ object GrblStatusParser {
                 }
             }
 
-            if (hasMPos && !hasWPos) {
-                wpos[0] = mpos[0] - wco[0]
-                wpos[1] = mpos[1] - wco[1]
-                wpos[2] = mpos[2] - wco[2]
-            }
+            // Kalkulasi posisi menggunakan snapshot WCO saat ini
+            val currentWco = wco.copyOf()
 
-            if (hasWPos && !hasMPos) {
-                mpos[0] = wpos[0] + wco[0]
-                mpos[1] = wpos[1] + wco[1]
-                mpos[2] = wpos[2] + wco[2]
+            when {
+                hasMPos && !hasWPos -> {
+                    wpos[0] = mpos[0] - currentWco[0]
+                    wpos[1] = mpos[1] - currentWco[1]
+                    wpos[2] = mpos[2] - currentWco[2]
+                }
+                hasWPos && !hasMPos -> {
+                    mpos[0] = wpos[0] + currentWco[0]
+                    mpos[1] = wpos[1] + currentWco[1]
+                    mpos[2] = wpos[2] + currentWco[2]
+                }
+                !hasMPos && !hasWPos -> {
+                    // Tidak ada data posisi sama sekali — kembalikan null
+                    return null
+                }
             }
 
             GrblStatus(
@@ -165,5 +169,13 @@ object GrblStatusParser {
         } catch (_: Exception) {
             null
         }
+    }
+
+    /** Reset semua persistent state ke nilai default (berguna saat koneksi ulang) */
+    fun reset() {
+        wco = doubleArrayOf(0.0, 0.0, 0.0)
+        ovFeed = 100
+        ovRapid = 100
+        ovSpindle = 100
     }
 }

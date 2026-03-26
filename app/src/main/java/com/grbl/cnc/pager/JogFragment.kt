@@ -1,21 +1,19 @@
-package com.grbl.cnc.ui.pager
+package com.grbl.cnc.pager
 
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.View
 import android.widget.ImageButton
 import android.widget.SeekBar
 import androidx.fragment.app.Fragment
 import com.grbl.cnc.R
-import com.grbl.cnc.ui.MainActivity
+import com.grbl.cnc.MainActivity
 import android.view.MotionEvent
 import android.widget.Button
 import android.widget.TextView
-import android.widget.Toast
 import androidx.fragment.app.activityViewModels
 import com.grbl.cnc.grbl.GrblState
 import kotlin.getValue

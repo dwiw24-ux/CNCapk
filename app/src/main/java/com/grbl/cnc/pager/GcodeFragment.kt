@@ -1,4 +1,4 @@
-package com.grbl.cnc.ui.pager
+package com.grbl.cnc.pager
 
 import android.net.Uri
 import android.os.Bundle

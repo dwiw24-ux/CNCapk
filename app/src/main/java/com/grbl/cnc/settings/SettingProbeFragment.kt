@@ -1,12 +1,10 @@
-package com.grbl.cnc.ui.settings
+package com.grbl.cnc.settings
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.text.InputType
 import android.view.View
-import android.widget.Button
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
@@ -16,7 +14,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.grbl.cnc.R
 import com.grbl.cnc.adapter.SettingAdapter
 
-class SettingJogFragment : Fragment(R.layout.fragment_settings) {
+class SettingProbeFragment : Fragment(R.layout.fragment_settings) {
 
     private lateinit var prefs: SharedPreferences
 
@@ -29,37 +27,37 @@ class SettingJogFragment : Fragment(R.layout.fragment_settings) {
         val list = listOf(
             SettingItem(
                 R.drawable.ic_settings_applications_black_24dp,
-                "Jogging min step size for XY",
-                "Current : ${prefs.getFloat("jogging_min_XY", 0f)} mm",
-                "jogging_min_XY"
+                "Probe Feed",
+                "Current Speed when probing : ${prefs.getInt("probe_feed", 100)} (mm/min)",
+                "probe_feed"
             ),
             SettingItem(
                 R.drawable.ic_settings_applications_black_24dp,
-                "Jogging max step size for XY",
-                "Current : ${prefs.getFloat("jogging_max_XY", 0f)} mm",
-                "jogging_max_XY"
+                "Probe Distance",
+                "Current Maximum probing distance : ${prefs.getFloat("probe_dist", 50f)} mm",
+                "probe_dist"
             ),
             SettingItem(
                 R.drawable.ic_settings_applications_black_24dp,
-                "Jogging min step size for Z",
-                "Current : ${prefs.getFloat("jogging_min_Z", 0f)} mm",
-                "jogging_min_Z"
+                "Probe Plate Thickness",
+                "Current Thickness of plate : ${prefs.getFloat("probe_plate", 1.5f)} mm",
+                "probe_plate"
             ),
             SettingItem(
                 R.drawable.ic_settings_applications_black_24dp,
-                "Jogging max step size for Z",
-                "Current : ${prefs.getFloat("jogging_max_Z", 0f)} mm",
-                "jogging_max_Z"
+                "Probe Retract",
+                "Current Retract height after touch : ${prefs.getFloat("probe_retract", 5f)} mm",
+                "probe_retract"
             ),
             SettingItem(
                 R.drawable.ic_settings_applications_black_24dp,
-                "Jog Hold Distance",
-                "Current : ${prefs.getFloat("hold_distance", 1f)} mm ",
-                "hold_distance"
+                "Probe Delay",
+                "Current Probe Delay : ${prefs.getInt("probe_delay", 2)} second",
+                "probe_delay"
             )
         )
-        val adapter = SettingAdapter(list) { item ->
 
+        val adapter = SettingAdapter(list) { item ->
             showNumberDialog(item)
         }
 
@@ -71,13 +69,20 @@ class SettingJogFragment : Fragment(R.layout.fragment_settings) {
         )
     }
 
-    @SuppressLint("UseKtx")
     private fun showNumberDialog(item: SettingItem) {
 
         val editText = EditText(requireContext())
-        editText.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+        editText.inputType =
+            if (item.key == "probe_delay" || item.key == "probe_feed")
+                InputType.TYPE_CLASS_NUMBER
+            else
+                InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
 
-        val currentValue =  prefs.getFloat(item.key, 0f).toString()
+        val currentValue = when (item.key) {
+            "probe_feed" -> prefs.getInt(item.key, 100).toString()
+            "probe_delay" -> prefs.getInt(item.key, 2).toString()
+            else -> prefs.getFloat(item.key, 0f).toString()
+        }
 
         editText.setText(currentValue)
 
@@ -85,12 +90,20 @@ class SettingJogFragment : Fragment(R.layout.fragment_settings) {
             .setTitle(item.title)
             .setView(editText)
             .setPositiveButton("Save") { _, _ ->
-                val value = editText.text.toString().toFloatOrNull() ?: 0f
 
-                prefs.edit()
-                    .putFloat(item.key, value)
-                    .apply()
+                val value = editText.text.toString()
+
+                prefs.edit().apply {
+
+                    when (item.key) {
+                        "probe_feed" -> putInt(item.key, value.toIntOrNull() ?: 100)
+                        "probe_delay" -> putInt(item.key, value.toIntOrNull() ?: 2)
+                        else -> putFloat(item.key, value.toFloatOrNull() ?: 0f)
+                    }
+
+                    apply()
                 }
+            }
             .setNegativeButton("Cancel", null)
             .show()
     }

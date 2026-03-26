@@ -7,7 +7,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.grbl.cnc.R
-import com.grbl.cnc.ui.settings.SettingItem
+import com.grbl.cnc.settings.SettingItem
 
 class SettingAdapter(
     private val list: List<SettingItem>,

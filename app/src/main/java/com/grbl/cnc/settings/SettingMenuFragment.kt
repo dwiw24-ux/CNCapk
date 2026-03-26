@@ -1,4 +1,4 @@
-package com.grbl.cnc.ui.settings
+package com.grbl.cnc.settings
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -62,7 +62,7 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
             SettingItem(
                 R.drawable.ic_settings_applications_black_24dp,
                 "Rx Safe",
-                "Current : ${prefs.getInt("rx_safe", 4)} byte",
+                "Current : ${prefs.getInt("rx_safe", 128)} byte",
                 "rx_safe"
             ),
             SettingItem(
@@ -209,11 +209,10 @@ class SettingMenuFragment : Fragment(R.layout.fragment_settings) {
         val prefs = requireContext()
             .getSharedPreferences("cnc_settings", Context.MODE_PRIVATE)
 
-        val options = arrayOf("0 byte", "2 byte", "4 byte", "6 byte", "8 byte",
-            "10 byte", "12 byte", "14 byte", "16 byte")
-        val values = arrayOf(0, 2, 4, 6, 8, 10, 12, 14, 16)
+        val options = arrayOf("64 byte", "128 byte", "192 byte", "256 byte", "512 byte")
+        val values = arrayOf(64, 128, 192, 256, 512)
 
-        val current = prefs.getInt("rx_safe", 4)
+        val current = prefs.getInt("rx_safe", 128)
         val selectedIndex = values.indexOf(current).coerceAtLeast(0)
 
         AlertDialog.Builder(requireContext())

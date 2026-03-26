@@ -1,12 +1,11 @@
-package com.grbl.cnc.ui
+package com.grbl.cnc
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
-import com.grbl.cnc.R
-import com.grbl.cnc.ui.settings.SettingJogFragment
-import com.grbl.cnc.ui.settings.SettingMenuFragment
-import com.grbl.cnc.ui.settings.SettingProbeFragment
+import com.grbl.cnc.settings.SettingJogFragment
+import com.grbl.cnc.settings.SettingMenuFragment
+import com.grbl.cnc.settings.SettingProbeFragment
 
 class SettingActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

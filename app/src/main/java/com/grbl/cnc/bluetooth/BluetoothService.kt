@@ -1,7 +1,9 @@
 package com.grbl.cnc.bluetooth
 
 import android.Manifest
-import android.bluetooth.*
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.util.Log
 import androidx.annotation.RequiresPermission
@@ -9,15 +11,15 @@ import com.grbl.cnc.grbl.GrblStatus
 import com.grbl.cnc.grbl.GrblStatusParser
 import java.io.InputStream
 import java.io.OutputStream
-import java.util.*
+import java.util.UUID
+import java.util.concurrent.CopyOnWriteArrayList
 
 class BluetoothService(private val context: Context) {
-
-    private var rxBuffer = ""
-
     companion object {
         val GRBL_UUID: UUID =
             UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
+
+        private const val TAG = "BluetoothService"
     }
 
     @Suppress("DEPRECATION")
@@ -27,6 +29,7 @@ class BluetoothService(private val context: Context) {
     private var socket: BluetoothSocket? = null
     private var input: InputStream? = null
     private var output: OutputStream? = null
+    private var rxBuffer = ""
 
     @Volatile
     var isConnected = false
@@ -43,14 +46,21 @@ class BluetoothService(private val context: Context) {
     var onError: ((String) -> Unit)? = null
     var onOkReceived: (() -> Unit)? = null
 
-    private val rawListeners = mutableListOf<(String) -> Unit>()
+    // CopyOnWriteArrayList: aman dari ConcurrentModificationException
+    // jika addRawListener/removeRawListener dipanggil dari thread lain
+    // saat listen() sedang iterasi rawListeners
+    private val rawListeners = CopyOnWriteArrayList<(String) -> Unit>()
+
+    // =============================
+    // PUBLIC API
+    // =============================
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun getPairedDevices(): List<BluetoothDevice> {
         return bluetoothAdapter?.bondedDevices?.toList() ?: emptyList()
     }
 
-    @RequiresPermission(anyOf = [Manifest.permission.BLUETOOTH_SCAN,"android.permission.BLUETOOTH_CONNECT"])
+    @RequiresPermission(anyOf = [Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT])
     fun connect(device: BluetoothDevice) {
         connectedDeviceName = device.name ?: "Unknown"
         Thread {
@@ -66,94 +76,47 @@ class BluetoothService(private val context: Context) {
                 onConnected?.invoke()
                 listen()
             } catch (e: Exception) {
-                Log.e("BT", "Connect failed", e)
+                Log.e(TAG, "Connect failed: ${e.message}")
                 disconnect()
             }
         }.start()
-    }
-
-    private fun listen() {
-        val buffer = ByteArray(1024)
-
-        while (isConnected) {
-            try {
-                val len = input?.read(buffer) ?: -1
-                if (len <= 0) continue
-
-                val chunk = String(buffer, 0, len, Charsets.US_ASCII)
-
-                rawListeners.forEach { it.invoke(chunk) }
-
-                rxBuffer += (chunk)
-
-                while (true) {
-                    val nl = rxBuffer.indexOf('\n')
-                    if (nl < 0) break
-
-                    val line = rxBuffer.substring(0, nl).trim()
-                    rxBuffer = rxBuffer.substring(nl + 1)
-
-                    if (line.isEmpty()) continue
-
-                    when {
-                        // 1️⃣ STATUS REALTIME
-                        line.startsWith("<") -> {
-
-                            GrblStatusParser.parse(line)?.let {
-                                onStatus?.invoke(it)
-                            }
-                        }
-
-                        // 2️⃣ OK
-                        line == "ok" -> {
-                            onOkReceived?.invoke()
-                        }
-
-                        // 3️⃣ ERROR
-                        line.startsWith("error:") -> {
-                            onError?.invoke(line)
-                        }
-
-                        // 4️⃣ LINE RESPONSE ($G, $#, [G54...])
-                        else -> {
-                            onLine?.invoke(line)
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                disconnect()
-            }
-        }
     }
 
     fun send(cmd: String) {
         try {
             output?.write(cmd.toByteArray(Charsets.US_ASCII))
             output?.flush()
-            //Log.d("BT_SEND", "send: $cmd")
         } catch (e: Exception) {
+            Log.e(TAG, "Send failed: ${e.message}")
             disconnect()
         }
     }
 
-
     fun sendRealtime(cmd: Byte) {
         try {
             output?.write(byteArrayOf(cmd))
-            //Log.d("BT_SEND", "sendRealTime: $cmd")
+            output?.flush()
         } catch (e: Exception) {
+            Log.e(TAG, "SendRealtime failed: ${e.message}")
             disconnect()
         }
     }
 
     fun disconnect() {
+        // Set flag dulu agar listen() loop berhenti
+        isConnected = false
         try {
-            isConnected = false
             input?.close()
             output?.close()
             socket?.close()
+        } catch (e: Exception) {
+            Log.e(TAG, "Disconnect error: ${e.message}")
+        } finally {
+            input = null
+            output = null
+            socket = null
             onDisconnected?.invoke()
-        } catch (_: Exception) {}
+        }
     }
 
     fun addRawListener(cb: (String) -> Unit) {
@@ -164,7 +127,36 @@ class BluetoothService(private val context: Context) {
         rawListeners.remove(cb)
     }
 
-    /**private fun processRx(chunk: String) {
+    // =============================
+    // PRIVATE
+    // =============================
+
+    private fun listen() {
+        val buffer = ByteArray(1024)
+
+        while (isConnected) {
+            try {
+                val len = input?.read(buffer) ?: break
+                if (len <= 0) continue
+
+                val chunk = String(buffer, 0, len, Charsets.US_ASCII)
+
+                // Kirim raw chunk ke semua listener (misal: ConsoleFragment)
+                rawListeners.forEach { it.invoke(chunk) }
+
+                processRx(chunk)
+
+            } catch (e: Exception) {
+                if (isConnected) {
+                    Log.e(TAG, "Listen error: ${e.message}")
+                    disconnect()
+                }
+                break
+            }
+        }
+    }
+
+    private fun processRx(chunk: String) {
         rxBuffer += chunk
 
         while (true) {
@@ -174,21 +166,33 @@ class BluetoothService(private val context: Context) {
             val line = rxBuffer.substring(0, nl).trim()
             rxBuffer = rxBuffer.substring(nl + 1)
 
+            if (line.isEmpty()) continue
+
             when {
-                line == "ok" -> {
-                    onOkReceived?.invoke()
-                }
-
-                line.startsWith("error:") -> {
-                    onOkReceived?.invoke()
-                }
-
+                // 1️⃣ STATUS REALTIME <...>
                 line.startsWith("<") -> {
                     GrblStatusParser.parse(line)?.let {
                         onStatus?.invoke(it)
                     }
                 }
+
+                // 2️⃣ OK
+                line == "ok" -> {
+                    onOkReceived?.invoke()
+                }
+
+                // 3️⃣ ERROR
+                line.startsWith("error:") -> {
+                    onError?.invoke(line)
+                    // Tetap panggil onOkReceived agar buffer streaming tidak stuck
+                    onOkReceived?.invoke()
+                }
+
+                // 4️⃣ LINE RESPONSE ($G, $#, [GC:...], ALARM, dll)
+                else -> {
+                    onLine?.invoke(line)
+                }
             }
         }
-    }**/
+    }
 }

@@ -1,0 +1,555 @@
+package com.grbl.cnc
+
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Intent
+import android.content.SharedPreferences
+import android.content.pm.PackageManager
+import android.graphics.Color
+import android.os.Build
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.View
+import android.widget.Button
+import android.widget.EditText
+import android.widget.ImageButton
+import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.viewModels
+import androidx.annotation.RequiresPermission
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.PopupMenu
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.tabs.TabLayout
+import com.google.android.material.tabs.TabLayoutMediator
+import com.grbl.cnc.bluetooth.BluetoothService
+import com.grbl.cnc.grbl.GrblState
+import com.grbl.cnc.grbl.GrblStatus
+import com.grbl.cnc.pager.ConsoleFragment
+import com.grbl.cnc.pager.MainPagerAdapter
+import com.grbl.cnc.pager.MainViewModel
+import java.util.Locale
+
+class MainActivity : AppCompatActivity() {
+
+    // =============================
+    // STATE
+    // =============================
+
+    @Volatile var isJogging = false
+
+    @Volatile var isStreaming = false
+
+    var currentWcs: String = "G54"
+        private set
+    /**set(value) {
+    field = value
+    txtWcs.text = value
+    }**/
+
+    private var currentState: GrblState = GrblState.UNKNOWN
+    private var keepAliveRunning = false
+    var pendingGrblConnect = false
+
+    // =============================
+    // UI
+    // =============================
+
+    private lateinit var txtAppName: TextView
+    private lateinit var txtStatus: TextView
+    private lateinit var txtWcs: TextView
+    private lateinit var txtStatusGrbl: TextView
+    private lateinit var txtmposX: TextView
+    private lateinit var txtmposY: TextView
+    private lateinit var txtmposZ: TextView
+    private lateinit var txtwposX: TextView
+    private lateinit var txtwposY: TextView
+    private lateinit var txtwposZ: TextView
+    private lateinit var txtFeed: TextView
+    private lateinit var txtSpindle: TextView
+    private lateinit var txtLimX: TextView
+    private lateinit var txtLimY: TextView
+    private lateinit var txtLimZ: TextView
+
+    private lateinit var btnBluetooth: ImageButton
+    private lateinit var btnUnlock: ImageButton
+    private lateinit var btnMenu: ImageButton
+
+    // =============================
+    // SERVICES & VIEW MODEL
+    // =============================
+
+    private val viewModel: MainViewModel by viewModels()
+    private val handler = Handler(Looper.getMainLooper())
+
+    lateinit var btService: BluetoothService
+        private set
+
+    lateinit var consoleFragment: ConsoleFragment
+        private set
+
+    // =============================
+    // LIFECYCLE
+    // =============================
+
+    @SuppressLint("SetTextI18n")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        notificationPermission()
+        checkBatteryOptimization()
+
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        setupWindowInsets()
+        setupBackHandler()
+        bindViews()
+        setupViewPager()
+        setupBluetoothService()
+        setupButtons()
+        observeViewModel()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val prefs = getSharedPreferences("cnc_settings", MODE_PRIVATE)
+        txtAppName.text = prefs.getString("app_name", "GRBL Bluetooth")
+        prefs.registerOnSharedPreferenceChangeListener(preferenceListener)
+        if (btService.isConnected) {
+            handler.post(statusRunnable)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        getSharedPreferences("cnc_settings", MODE_PRIVATE)
+            .unregisterOnSharedPreferenceChangeListener(preferenceListener)
+        handler.removeCallbacks(statusRunnable)
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacks(statusRunnable)
+        super.onDestroy()
+    }
+
+    // =============================
+    // SETUP
+    // =============================
+
+    private fun setupWindowInsets() {
+        val root = findViewById<View>(R.id.rootLayout)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
+            val inset = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(0, inset.top, 0, inset.bottom)
+            insets
+        }
+    }
+
+    private fun setupBackHandler() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                showExitDialog()
+            }
+        })
+    }
+
+    private fun bindViews() {
+        txtAppName    = findViewById(R.id.txtAppName)
+        txtStatus     = findViewById(R.id.txtStatus)
+        txtStatusGrbl = findViewById(R.id.txtStatusGrbl)
+        txtWcs        = findViewById(R.id.txtWcs)
+
+        txtmposX  = findViewById(R.id.txtmposX)
+        txtmposY  = findViewById(R.id.txtmposY)
+        txtmposZ  = findViewById(R.id.txtmposZ)
+        txtwposX  = findViewById(R.id.txtwposX)
+        txtwposY  = findViewById(R.id.txtwposY)
+        txtwposZ  = findViewById(R.id.txtwposZ)
+        txtFeed    = findViewById(R.id.txtFeed)
+        txtSpindle = findViewById(R.id.txtSpindle)
+
+        txtLimX = findViewById(R.id.txtLimX)
+        txtLimY = findViewById(R.id.txtLimY)
+        txtLimZ = findViewById(R.id.txtLimZ)
+
+        btnBluetooth = findViewById(R.id.btnBluetooth)
+        btnUnlock    = findViewById(R.id.btnUnlock)
+        btnMenu      = findViewById(R.id.btnMenu)
+
+        txtwposX.setOnClickListener { showWPosDialog('X') }
+        txtwposY.setOnClickListener { showWPosDialog('Y') }
+        txtwposZ.setOnClickListener { showWPosDialog('Z') }
+    }
+
+    private fun setupViewPager() {
+        val viewPager = findViewById<ViewPager2>(R.id.viewPager)
+        val tabLayout = findViewById<TabLayout>(R.id.tabLayout)
+
+        viewPager.adapter = MainPagerAdapter(this).also {
+            consoleFragment = it.consoleFragment
+        }
+
+        TabLayoutMediator(tabLayout, viewPager) { tab, pos ->
+            tab.text = when (pos) {
+                0 -> "JOG"
+                1 -> "FILE"
+                2 -> "G-CODE"
+                3 -> "CONSOLE"
+                else -> "JOG"
+            }
+        }.attach()
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun setupBluetoothService() {
+        btService = BluetoothService(this)
+
+        btService.onConnected = {
+            runOnUiThread {
+                txtStatus.text = "Connected ${btService.connectedDeviceName}"
+                Toast.makeText(this, "Bluetooth Connected", Toast.LENGTH_LONG).show()
+            }
+            handler.post(statusRunnable)
+            startKeepAliveService()
+        }
+
+        btService.onDisconnected = {
+            handler.removeCallbacks(statusRunnable)
+            runOnUiThread {
+                txtStatus.text = "BT Disconnected"
+            }
+            stopKeepAliveService()
+        }
+
+        btService.onStatus = { status ->
+            runOnUiThread {
+                updateStatusUI(status)
+                viewModel.updateStatus(status)
+            }
+        }
+
+        btService.onLine = { line ->
+            runOnUiThread { handleGrblLine(line) }
+        }
+
+        btService.addRawListener { raw ->
+            runOnUiThread { consoleFragment.append(raw) }
+        }
+    }
+
+    private fun setupButtons() {
+        btnBluetooth.setOnClickListener {
+            if (!checkBluetoothPermission()) {
+                requestBluetoothPermission()
+                return@setOnClickListener
+            }
+            if (btService.isConnected) {
+                MaterialAlertDialogBuilder(this)
+                    .setTitle("Disconnect Bluetooth")
+                    .setMessage("Putuskan koneksi dari ${btService.connectedDeviceName}?")
+                    .setPositiveButton("Disconnect") { _, _ -> btService.disconnect() }
+                    .setNegativeButton("Batal", null)
+                    .show()
+            } else {
+                showBluetoothDialog()
+            }
+        }
+
+        btnMenu.setOnClickListener { view ->
+            val popupMenu = PopupMenu(this, view)
+            popupMenu.menuInflater.inflate(R.menu.menu_main, popupMenu.menu)
+            popupMenu.setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    R.id.settings -> { startActivity(Intent(this, SettingActivity::class.java)); true }
+                    R.id.gCode    -> { startActivity(Intent(this, GcodeActivity::class.java));   true }
+                    R.id.about    -> { startActivity(Intent(this, AboutActivity::class.java));   true }
+                    else          -> false
+                }
+            }
+            popupMenu.show()
+        }
+
+        btnUnlock.setOnClickListener {
+            if (currentState == GrblState.ALARM) {
+                btService.send("\$X\n")
+            } else {
+                MaterialAlertDialogBuilder(this)
+                    .setTitle("GRBL Soft Reset")
+                    .setMessage("Lanjutkan ?")
+                    .setPositiveButton("Ok") { _, _ ->
+                        if (btService.isConnected) btService.sendRealtime(0x18.toByte())
+                    }
+                    .setNegativeButton("Batal", null)
+                    .show()
+            }
+        }
+    }
+
+    private fun observeViewModel() {
+        viewModel.grblRunMode.observe(this) { state ->
+            currentState = state
+            btnUnlock.setImageResource(
+                if (state == GrblState.ALARM) R.drawable.ic_notifications
+                else R.drawable.ic_lock_reset
+            )
+        }
+    }
+
+    // =============================
+    // STATUS POLLING
+    // =============================
+
+    private val statusRunnable = object : Runnable {
+        override fun run() {
+            if (btService.isConnected) btService.sendRealtime(0x3F.toByte()) // send("?")
+            val interval = if (isStreaming) getUpdateInterval() else 100L
+            handler.postDelayed(this, interval)
+        }
+    }
+
+    private fun getUpdateInterval(): Long {
+        return getSharedPreferences("cnc_settings", MODE_PRIVATE)
+            .getInt("polling_interval", 100).toLong()
+    }
+
+    private val preferenceListener =
+        SharedPreferences.OnSharedPreferenceChangeListener { sharedPreferences, key ->
+            when (key) {
+                "polling_interval" -> {
+                    handler.removeCallbacks(statusRunnable)
+                    handler.post(statusRunnable)
+                }
+                "app_name" -> {
+                    txtAppName.text = sharedPreferences.getString("app_name", "GRBL Bluetooth")
+                }
+            }
+        }
+
+    // =============================
+    // UI UPDATE
+    // =============================
+
+    private fun updateStatusUI(s: GrblStatus) {
+        txtStatusGrbl.text = s.state
+        txtStatusGrbl.setTextColor(
+            when (s.state) {
+                "Idle"  -> Color.GREEN
+                "Run", "Jog", "Home" -> Color.YELLOW
+                else    -> Color.RED
+            }
+        )
+
+        txtmposX.text = String.format(Locale.US, " %.3f ", s.mposX)
+        txtmposY.text = String.format(Locale.US, " %.3f ", s.mposY)
+        txtmposZ.text = String.format(Locale.US, " %.3f ", s.mposZ)
+
+        txtwposX.text = String.format(Locale.US, " %.3f ✎", s.wposX)
+        txtwposY.text = String.format(Locale.US, " %.3f ✎", s.wposY)
+        txtwposZ.text = String.format(Locale.US, " %.3f ✎", s.wposZ)
+
+        txtFeed.text    = String.format(Locale.US, "Feed: %d",    s.feed)
+        txtSpindle.text = String.format(Locale.US, "Spindle: %d", s.spindle)
+
+        updateLimitUI(s.pin)
+    }
+
+    private fun updateLimitUI(pin: String?) {
+        val active = pin ?: ""
+        setLimitColor(txtLimX, active.contains("X"))
+        setLimitColor(txtLimY, active.contains("Y"))
+        setLimitColor(txtLimZ, active.contains("Z"))
+    }
+
+    private fun setLimitColor(view: TextView, triggered: Boolean) {
+        view.setTextColor(if (triggered) Color.RED else Color.GREEN)
+    }
+
+    // =============================
+    // GRBL LINE HANDLING
+    // =============================
+
+    fun handleGrblLine(line: String) {
+        if (!line.startsWith("[GC:")) return
+        currentWcs = when {
+            line.contains("G54") -> "G54"
+            line.contains("G55") -> "G55"
+            line.contains("G56") -> "G56"
+            line.contains("G57") -> "G57"
+            line.contains("G58") -> "G58"
+            line.contains("G59") -> "G59"
+            else -> currentWcs
+        }
+        txtWcs.text = currentWcs
+    }
+
+    // =============================
+    // DIALOGS
+    // =============================
+
+    @SuppressLint("SetTextI18n")
+    fun showWPosDialog(axis: Char) {
+        val view = layoutInflater.inflate(R.layout.dialog_set_wpos, null)
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .setCancelable(false)
+            .create()
+
+        val txtAxis  = view.findViewById<TextView>(R.id.txtAxis)  ?: return
+        val edtValue = view.findViewById<EditText>(R.id.edtValue)  ?: return
+        val btnSet   = view.findViewById<Button>(R.id.btnSet)     ?: return
+        val btnCancel = view.findViewById<Button>(R.id.btnCancel) ?: return
+
+        txtAxis.text = "Set WPos $axis"
+
+        btnSet.setOnClickListener {
+            if (!btService.isConnected) {
+                Toast.makeText(this, "Bluetooth not connected", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val value = edtValue.text.toString().trim()
+            if (value.isEmpty()) return@setOnClickListener
+            btService.send("G10 L20 P0 $axis $value\n")
+            dialog.dismiss()
+        }
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        dialog.show()
+    }
+
+    private fun showExitDialog() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Confirm Exit")
+            .setMessage("Keluar dari aplikasi?")
+            .setPositiveButton("OK") { _, _ ->
+                btService.disconnect()
+                finishAffinity()
+            }
+            .setNegativeButton("Batal", null)
+            .show()
+    }
+
+    // =============================
+    // BLUETOOTH PERMISSION
+    // =============================
+
+    private fun checkBluetoothPermission(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return ContextCompat.checkSelfPermission(
+                this, Manifest.permission.BLUETOOTH_CONNECT
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+        return true
+    }
+
+    private fun requestBluetoothPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    Manifest.permission.BLUETOOTH_SCAN
+                ),
+                REQ_BT_PERMISSION
+            )
+        }
+    }
+
+    @RequiresPermission(anyOf = [Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN])
+    private fun showBluetoothDialog() {
+        val devices = btService.getPairedDevices()
+        if (devices.isEmpty()) {
+            Toast.makeText(this, "Tidak ada perangkat yang dipasangkan", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val names = devices.map { "${it.name}\n${it.address}" }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Pilih ESP32 GRBL")
+            .setItems(names) { _, which -> btService.connect(devices[which]) }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQ_BT_PERMISSION &&
+            grantResults.isNotEmpty() &&
+            grantResults[0] == PackageManager.PERMISSION_GRANTED
+        ) {
+            showBluetoothDialog()
+        }
+    }
+
+    // =============================
+    // KEEP ALIVE SERVICE
+    // =============================
+
+    private fun startKeepAliveService() {
+        if (keepAliveRunning) return
+        keepAliveRunning = true
+        ContextCompat.startForegroundService(
+            this, Intent(this, StreamKeepAliveService::class.java)
+        )
+    }
+
+    private fun stopKeepAliveService() {
+        if (!keepAliveRunning) return
+        keepAliveRunning = false
+        startService(Intent(this, StreamKeepAliveService::class.java).apply {
+            action = StreamKeepAliveService.ACTION_STOP
+        })
+    }
+
+    // =============================
+    // PERMISSION HELPERS
+    // =============================
+
+    private fun notificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPermissions(
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    REQ_NOTIF_PERMISSION
+                )
+            }
+        }
+    }
+
+    private fun checkBatteryOptimization() {
+        if (!BatteryOptimizationHelper.isIgnoringBatteryOptimizations(this)) {
+            AlertDialog.Builder(this)
+                .setTitle("Izinkan Background Running")
+                .setMessage(
+                    "Agar koneksi Bluetooth GRBL tetap stabil saat layar mati, " +
+                            "izinkan aplikasi berjalan tanpa pembatasan baterai."
+                )
+                .setPositiveButton("Izinkan") { _, _ ->
+                    BatteryOptimizationHelper.requestDisableBatteryOptimization(this)
+                }
+                .setNegativeButton("Nanti", null)
+                .show()
+        }
+    }
+
+    companion object {
+        private const val REQ_BT_PERMISSION   = 1001
+        private const val REQ_NOTIF_PERMISSION = 100
+    }
+}

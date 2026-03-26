@@ -1,4 +1,4 @@
-package com.grbl.cnc.ui.pager
+package com.grbl.cnc.pager
 
 import androidx.appcompat.app.AppCompatActivity
 import androidx.viewpager2.adapter.FragmentStateAdapter

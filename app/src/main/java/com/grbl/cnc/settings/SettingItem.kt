@@ -1,4 +1,4 @@
-package com.grbl.cnc.ui.settings
+package com.grbl.cnc.settings
 
 data class SettingItem(
     val icon: Int,
