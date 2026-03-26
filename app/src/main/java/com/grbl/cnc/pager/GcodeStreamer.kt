@@ -351,8 +351,6 @@ class GcodeStreamer(
             callback.onSendCommand(cmd2)
             bytesInFlight += len
             inFlightQueue.addLast(len to item.isFileLine)
-            Log.d("RUN", "inflight = ${bytesInFlight + len}," + "Queue = ${sendQueue.size}" )
-            Log.d("RUN", "sent = $sent," + "rx safe = $rxSafe" )
 
             val cmdUpper = item.cmd.trim().uppercase()
             if (enableSpindleDwell &&
