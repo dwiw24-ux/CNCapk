@@ -94,6 +94,7 @@ class GcodeStreamer(
     private val sendQueue = ArrayDeque<QueueItem>()
     private val inFlightQueue = ArrayDeque<Pair<Int, Boolean>>()
     private var lastActiveLine = 0
+    private var currentFileName = ""
 
     // ── dwell / spindle ──
     private var dwellInjected = false
@@ -126,7 +127,8 @@ class GcodeStreamer(
     // ─────────────────────────────────────────
 
     /** Mulai streaming dari awal file */
-    fun startRun(lines: List<String>) {
+    fun startRun(lines: List<String>, fileName: String = "") {
+        currentFileName = fileName
         if (lines.isEmpty()) return
 
         loadPrefs()
@@ -146,7 +148,8 @@ class GcodeStreamer(
     }
 
     /** Mulai streaming dari baris tertentu */
-    fun runFromHere(lines: List<String>, index: Int) {
+    fun runFromHere(lines: List<String>, index: Int, fileName: String = "") {
+        currentFileName = fileName
         if (index !in lines.indices) return
 
         loadPrefs()
@@ -210,7 +213,12 @@ class GcodeStreamer(
 
         val (finishedLen, wasFileLine) = inFlightQueue.removeFirst()
         bytesInFlight -= finishedLen
-        if (wasFileLine) current++
+
+        if (wasFileLine) {
+            current++
+            val percent = ((current.toFloat() / lines.size) * 100).toInt()
+            callback.onUpdateServiceProgress(percent.coerceIn(0, 99), currentFileName)
+        }
 
         if (current >= lines.size && sendQueue.isEmpty() && inFlightQueue.isEmpty()) {
             Handler(Looper.getMainLooper()).post {

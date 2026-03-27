@@ -45,6 +45,8 @@ class BluetoothService(private val context: Context) {
     var onLine: ((String) -> Unit)? = null
     var onError: ((String) -> Unit)? = null
     var onOkReceived: (() -> Unit)? = null
+    private val okListeners = CopyOnWriteArrayList<() -> Unit>()
+    private val lineListeners = CopyOnWriteArrayList<(String) -> Unit>()
 
     // CopyOnWriteArrayList: aman dari ConcurrentModificationException
     // jika addRawListener/removeRawListener dipanggil dari thread lain
@@ -119,13 +121,15 @@ class BluetoothService(private val context: Context) {
         }
     }
 
-    fun addRawListener(cb: (String) -> Unit) {
-        rawListeners.add(cb)
-    }
 
-    fun removeRawListener(cb: (String) -> Unit) {
-        rawListeners.remove(cb)
-    }
+    fun addOkListener(cb: () -> Unit) { okListeners.add(cb) }
+    fun removeOkListener(cb: () -> Unit) { okListeners.remove(cb) }
+
+    fun addLineListener(cb: (String) -> Unit) { lineListeners.add(cb) }
+    fun removeLineListener(cb: (String) -> Unit) { lineListeners.remove(cb) }
+
+    fun addRawListener(cb: (String) -> Unit) { rawListeners.add(cb) }
+    fun removeRawListener(cb: (String) -> Unit) { rawListeners.remove(cb) }
 
     // =============================
     // PRIVATE
@@ -178,19 +182,19 @@ class BluetoothService(private val context: Context) {
 
                 // 2️⃣ OK
                 line == "ok" -> {
-                    onOkReceived?.invoke()
+                    okListeners.forEach { it.invoke() }
                 }
 
                 // 3️⃣ ERROR
                 line.startsWith("error:") -> {
                     onError?.invoke(line)
                     // Tetap panggil onOkReceived agar buffer streaming tidak stuck
-                    onOkReceived?.invoke()
+                    okListeners.forEach { it.invoke() }
                 }
 
                 // 4️⃣ LINE RESPONSE ($G, $#, [GC:...], ALARM, dll)
                 else -> {
-                    onLine?.invoke(line)
+                    lineListeners.forEach { it.invoke(line) }
                 }
             }
         }

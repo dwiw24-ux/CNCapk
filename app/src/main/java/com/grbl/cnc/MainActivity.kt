@@ -131,9 +131,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        getSharedPreferences("cnc_settings", MODE_PRIVATE)
-            .unregisterOnSharedPreferenceChangeListener(preferenceListener)
-        handler.removeCallbacks(statusRunnable)
+        if (!isStreaming) {
+            getSharedPreferences("cnc_settings", MODE_PRIVATE)
+                .unregisterOnSharedPreferenceChangeListener(preferenceListener)
+            handler.removeCallbacks(statusRunnable)
+        }
     }
 
     override fun onDestroy() {
@@ -237,7 +239,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        btService.onLine = { line ->
+        btService.addLineListener { line ->
             runOnUiThread { handleGrblLine(line) }
         }
 

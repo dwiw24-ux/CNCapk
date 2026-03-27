@@ -26,6 +26,7 @@ import com.grbl.cnc.StreamKeepAliveService
 import android.provider.OpenableColumns
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 
 class FileFragment : Fragment(R.layout.frag_file) {
 
@@ -264,7 +265,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
                     Toast.makeText(requireContext(), "Start Streaming $currentFileName", Toast.LENGTH_LONG).show()
                     (activity as? MainActivity)?.isStreaming = true
                     edtStart.setText("1")
-                    streamer.startRun(lines)
+                    streamer.startRun(lines, currentFileName)
                 }
                 .setNegativeButton("CANCEL", null)
                 .show()
@@ -377,20 +378,20 @@ class FileFragment : Fragment(R.layout.frag_file) {
     //  Lifecycle — OK hook dipasang/dilepas di sini
     // ─────────────────────────────────────────
 
-    // [FIX] Pindahkan pendaftaran onOkReceived dari onViewCreated ke onStart/onStop
+    // Pindahkan pendaftaran onOkReceived dari onViewCreated ke onStart/onStop
     // agar hook selalu menunjuk ke instance lines yang aktif dan tidak bocor
     // saat fragment di-replace lalu di-attach kembali.
+    private val okCallback = { streamer.onOkReceived(lines) }
+
     override fun onStart() {
         super.onStart()
-        (activity as? MainActivity)?.btService?.let { bt ->
-            bt.onOkReceived = { streamer.onOkReceived(lines) }
-        }
+        (activity as? MainActivity)?.btService?.addOkListener(okCallback)
     }
 
     override fun onStop() {
         super.onStop()
-        (activity as? MainActivity)?.btService?.let { bt ->
-            bt.onOkReceived = null
+        if (streamer.runMode == RunMode.IDLE) {
+            (activity as? MainActivity)?.btService?.removeOkListener(okCallback)
         }
     }
 
@@ -471,7 +472,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
                 Toast.makeText(requireContext(), "Start Streaming $currentFileName line $lineNo", Toast.LENGTH_LONG).show()
                 (activity as? MainActivity)?.isStreaming = true
                 edtStart.setText((index + 1).toString())
-                streamer.runFromHere(lines, index)
+                streamer.runFromHere(lines, index, currentFileName)
             }
             .setNegativeButton("CANCEL", null)
             .show()
@@ -493,6 +494,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
 
     @SuppressLint("NotifyDataSetChanged", "SetTextI18n")
     fun updateFromPlanner() {
+        //if (streamer.runMode != RunMode.RUNNING) return
         if (currentState != GrblState.RUN) return
         if (lines.size <= 1) return
         if (!::adapter.isInitialized) return
@@ -517,6 +519,7 @@ class FileFragment : Fragment(R.layout.frag_file) {
         if (showProgress) progressBar.progress = percent
         txtProgress.text = "$percent %"
         updateServiceProgress(percent)
+        Log.d("RUN", "Line = $activeLine")
     }
 
     /**Agar progressBar langsung hide saat OFF:
