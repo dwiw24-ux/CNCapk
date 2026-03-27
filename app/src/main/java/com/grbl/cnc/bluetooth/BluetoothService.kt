@@ -182,19 +182,19 @@ class BluetoothService(private val context: Context) {
 
                 // 2️⃣ OK
                 line == "ok" -> {
-                    okListeners.forEach { it.invoke() }
+                    onOkReceived?.invoke()
                 }
 
                 // 3️⃣ ERROR
                 line.startsWith("error:") -> {
                     onError?.invoke(line)
                     // Tetap panggil onOkReceived agar buffer streaming tidak stuck
-                    okListeners.forEach { it.invoke() }
+                    onOkReceived?.invoke()
                 }
 
                 // 4️⃣ LINE RESPONSE ($G, $#, [GC:...], ALARM, dll)
                 else -> {
-                    lineListeners.forEach { it.invoke(line) }
+                    onLine?.invoke(line)
                 }
             }
         }

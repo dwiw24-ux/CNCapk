@@ -381,17 +381,19 @@ class FileFragment : Fragment(R.layout.frag_file) {
     // Pindahkan pendaftaran onOkReceived dari onViewCreated ke onStart/onStop
     // agar hook selalu menunjuk ke instance lines yang aktif dan tidak bocor
     // saat fragment di-replace lalu di-attach kembali.
-    private val okCallback = { streamer.onOkReceived(lines) }
-
     override fun onStart() {
         super.onStart()
-        (activity as? MainActivity)?.btService?.addOkListener(okCallback)
+        (activity as? MainActivity)?.btService?.let { bt ->
+            bt.onOkReceived = { streamer.onOkReceived(lines) }
+        }
     }
 
     override fun onStop() {
         super.onStop()
         if (streamer.runMode == RunMode.IDLE) {
-            (activity as? MainActivity)?.btService?.removeOkListener(okCallback)
+            (activity as? MainActivity)?.btService?.let { bt ->
+                bt.onOkReceived = null
+            }
         }
     }
 

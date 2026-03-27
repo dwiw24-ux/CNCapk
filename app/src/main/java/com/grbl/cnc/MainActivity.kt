@@ -239,7 +239,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        btService.addLineListener { line ->
+        btService.onLine = { line ->
             runOnUiThread { handleGrblLine(line) }
         }
 
